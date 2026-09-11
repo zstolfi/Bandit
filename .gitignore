@@ -1,0 +1,10 @@
+# System files
+*.DS_Store
+
+# Object files
+*.o
+*.a
+*.tmp
+
+# Executables
+*a.out
