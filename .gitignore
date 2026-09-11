@@ -4,8 +4,8 @@
 *.tmp
 *a.out
 
-# Build
-src/build/*
+# CMake output
+build/*
 
 # System files
 *.DS_Store
