@@ -1,10 +1,11 @@
-# System files
-*.DS_Store
-
-# Object files
+# Compiler objects
 *.o
 *.a
 *.tmp
-
-# Executables
 *a.out
+
+# Build
+src/build/*
+
+# System files
+*.DS_Store
