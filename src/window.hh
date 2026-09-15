@@ -135,7 +135,7 @@ private:
 		glDeleteShader(fragmentShader);
 
 		// Set up geometry.
-		GLfloat vertices[] = {
+		std::vector<GLfloat> vertices {
 		//	   X     Y     Z
 		  	-0.5, -0.5,  0.0,
 		  	 0.5, -0.5,  0.0,
@@ -150,7 +150,7 @@ private:
 
 		glBufferData(
 			GL_ARRAY_BUFFER,
-			sizeof(vertices), vertices,
+			vertices.size() * sizeof(GLfloat), vertices.data(),
 			GL_STATIC_DRAW
 		);
 
