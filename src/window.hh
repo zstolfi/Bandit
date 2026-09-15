@@ -92,6 +92,26 @@ private:
 		}
 	)"};
 
+	enum ObjectType {
+		Shader, Program
+	};
+
+	template <ObjectType OT>
+	void checkObject(GLuint object, auto status) {
+		auto [getObject, getObjectLog] = (OT == Shader)
+		?	std::pair {glGetShaderiv, glGetShaderInfoLog}
+		:	std::pair {glGetProgramiv, glGetProgramInfoLog};
+
+		GLint successful {};
+		char infoLog[512];
+
+		getObject(object, status, &successful);
+		if (!successful) {
+			glGetShaderInfoLog(object, 512, {}, infoLog);
+			error("Vertex shader: Unable to compile.\n{}", infoLog);
+		}
+	}
+
 	void setupScene() {
 		// Set up shaders.
 		GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -107,29 +127,10 @@ private:
 		glAttachShader(m_shaderProgram, fragmentShader);
 		glLinkProgram(m_shaderProgram);
 
-		// Check for errors.
-		{
-			GLint successful {};
-			char infoLog[512];
+		checkObject<Shader>(fragmentShader, GL_COMPILE_STATUS);
+		checkObject<Shader>(vertexShader, GL_COMPILE_STATUS);
+		checkObject<Program>(m_shaderProgram, GL_LINK_STATUS);
 
-			glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &successful);
-			if (!successful) {
-				glGetShaderInfoLog(vertexShader, 512, {}, infoLog);
-				error("Vertex shader: Unable to compile.\n{}", infoLog);
-			}
-
-			glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &successful);
-			if (!successful) {
-				glGetShaderInfoLog(fragmentShader, 512, {}, infoLog);
-				error("Vertex shader: Unable to compile.\n{}", infoLog);
-			}
-
-			glGetProgramiv(m_shaderProgram, GL_LINK_STATUS, &successful);
-			if (!successful) {
-				glGetProgramInfoLog(m_shaderProgram, 512, {}, infoLog);
-				error("Vertex shader: Unable to compile.\n{}", infoLog);
-			}
-		}
 		// TODO: Maybe handle this with RAII?
 		glDeleteShader(vertexShader);
 		glDeleteShader(fragmentShader);
