@@ -7,6 +7,8 @@
 // closes, everything closes.
 class Window {
 	GLFWwindow* m_handler {};
+	GLuint m_shaderProgram {};
+	GLuint m_VBO {}, m_VAO {};
 
 public:
 	Window(
@@ -22,11 +24,17 @@ public:
 	}
 
 	~Window() {
+		glDeleteBuffers(1, &m_VBO);
+		glDeleteVertexArrays(1, &m_VAO);
+		glDeleteProgram(m_shaderProgram);
 		glfwTerminate();
 	}
 
 	// Getters
 	GLFWwindow* handler() const { return m_handler; }
+	GLuint shaderProgram() const { return m_shaderProgram; };
+	GLuint VBO() const { return m_VBO; };
+	GLuint VAO() const { return m_VAO; };
 
 private:
 	void setupErrorLog() {
@@ -65,7 +73,92 @@ private:
 		);
 	}
 
-	void setupScene() {
+	// TODO Separate these to their own .glsl files.
+	static char constexpr const* vertexShaderSource {R"(
+		#version 330 core
+		layout (location = 0) in vec3 aPos;
 
+		void main() {
+			gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+		}
+	)"};
+
+	static char constexpr const* fragmentShaderSource {R"(
+		#version 330 core
+		out vec4 FragColor;
+
+		void main() {
+			FragColor = vec4(1.0, 0.5, 0.2, 1.0);
+		}
+	)"};
+
+	void setupScene() {
+		// Set up shaders.
+		GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+		glShaderSource(vertexShader, 1, &vertexShaderSource, {});
+		glCompileShader(vertexShader);
+
+		GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+		glShaderSource(fragmentShader, 1, &fragmentShaderSource, {});
+		glCompileShader(fragmentShader);
+
+		m_shaderProgram = glCreateProgram();
+		glAttachShader(m_shaderProgram, vertexShader);
+		glAttachShader(m_shaderProgram, fragmentShader);
+		glLinkProgram(m_shaderProgram);
+
+		// Check for errors.
+		{
+			GLint successful {};
+			char infoLog[512];
+
+			glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &successful);
+			if (!successful) {
+				glGetShaderInfoLog(vertexShader, 512, {}, infoLog);
+				error("Vertex shader: Unable to compile.\n{}", infoLog);
+			}
+
+			glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &successful);
+			if (!successful) {
+				glGetShaderInfoLog(fragmentShader, 512, {}, infoLog);
+				error("Vertex shader: Unable to compile.\n{}", infoLog);
+			}
+
+			glGetProgramiv(m_shaderProgram, GL_LINK_STATUS, &successful);
+			if (!successful) {
+				glGetProgramInfoLog(m_shaderProgram, 512, {}, infoLog);
+				error("Vertex shader: Unable to compile.\n{}", infoLog);
+			}
+		}
+		// TODO: Maybe handle this with RAII?
+		glDeleteShader(vertexShader);
+		glDeleteShader(fragmentShader);
+
+		// Set up geometry.
+		GLfloat vertices[] = {
+		//	   X     Y     Z
+		  	-0.5, -0.5,  0.0,
+		  	 0.5, -0.5,  0.0,
+		  	 0.0,  0.5,  0.0,
+		};
+
+		glGenVertexArrays(1, &m_VAO);
+		glBindVertexArray(m_VAO);
+
+		glGenBuffers(1, &m_VBO);
+		glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+
+		glBufferData(
+			GL_ARRAY_BUFFER,
+			sizeof(vertices), vertices,
+			GL_STATIC_DRAW
+		);
+
+		glVertexAttribPointer(
+			0, 3,
+			GL_FLOAT, GL_FALSE,
+			3 * sizeof(GLfloat), (GLvoid*)0
+		);
+		glEnableVertexAttribArray(0);
 	}
 };

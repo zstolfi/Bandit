@@ -12,6 +12,10 @@ void renderLoop(Window& window) {
 	glClearColor(0.9, 0.9, 0.9, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
+	glUseProgram(window.shaderProgram());
+	glBindVertexArray(window.VAO());
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+
 	glfwSwapBuffers(handler);
 	glfwPollEvents();
 }
@@ -19,7 +23,7 @@ void renderLoop(Window& window) {
 int main(int argc, char const* argv[]) {
 	Window {
 		800, 600,
-		"Hello, window class!",
+		"Hello, triangle!",
 		renderLoop
 	};
 
