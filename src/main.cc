@@ -1,7 +1,5 @@
 #include "window.hh"
 #include "util.hh"
-#include <array>
-#include <string_view>
 
 void renderLoop(Window& window) {
 	auto* handler = window.handler();

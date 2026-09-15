@@ -3,6 +3,7 @@
 #include <print>
 #include <ranges>
 #include <string>
+#include <tuple>
 #include <vector>
 #include <cstdio>
 #include <cstdlib>

@@ -97,18 +97,20 @@ private:
 	};
 
 	template <ObjectType OT>
-	void checkObject(GLuint object, auto status) {
-		auto [getObject, getObjectLog] = (OT == Shader)
-		?	std::pair {glGetShaderiv, glGetShaderInfoLog}
-		:	std::pair {glGetProgramiv, glGetProgramInfoLog};
+	void checkObject(GLuint object, std::string name) {
+		auto [getObject, getObjectLog, status] = (OT == Shader)
+		?	std::tuple {glGetShaderiv, glGetShaderInfoLog, GL_COMPILE_STATUS}
+		:	std::tuple {glGetProgramiv, glGetProgramInfoLog, GL_LINK_STATUS};
+		auto action = (OT == Shader)? "compile": "link";
 
-		GLint successful {};
-		char infoLog[512];
-
+		GLint successful {}, logLength {};
 		getObject(object, status, &successful);
+		getObject(object, GL_INFO_LOG_LENGTH, &logLength);
 		if (!successful) {
-			glGetShaderInfoLog(object, 512, {}, infoLog);
-			error("Vertex shader: Unable to compile.\n{}", infoLog);
+			std::vector<char> message(logLength, '\0');
+			glGetShaderInfoLog(object, logLength, {}, message.data());
+			error("{}: Unable to {}.\n{}", name, action, message.data());
+			if (message.empty()) error("(no diagnostic)\n");
 		}
 	}
 
@@ -127,9 +129,10 @@ private:
 		glAttachShader(m_shaderProgram, fragmentShader);
 		glLinkProgram(m_shaderProgram);
 
-		checkObject<Shader>(fragmentShader, GL_COMPILE_STATUS);
-		checkObject<Shader>(vertexShader, GL_COMPILE_STATUS);
-		checkObject<Program>(m_shaderProgram, GL_LINK_STATUS);
+		// Check for errors.
+		checkObject<Shader>(vertexShader, "Vertex shader");
+		checkObject<Shader>(fragmentShader, "Fragment shader");
+		checkObject<Program>(m_shaderProgram, "Shader program");
 
 		// TODO: Maybe handle this with RAII?
 		glDeleteShader(vertexShader);
