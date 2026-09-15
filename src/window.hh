@@ -1,9 +1,5 @@
-#include <functional>
-#include <print>
-#include <string>
-#include <cstdio>
-#include <cstdlib>
-
+#pragma once
+#include "util.hh"
 #include <glad/glad.h> // Must be included before GLFW.
 #include <GLFW/glfw3.h>
 
@@ -14,15 +10,32 @@ class Window {
 
 public:
 	Window(
-		unsigned startWidth, unsigned startHeight,
-		std::string title,
-		void (* renderLoop)(GLFWwindow*)
+		unsigned width, unsigned height, std::string title,
+		void (* renderLoop)(Window&)
 	) {
-		// Make sure we log the most descriptive error messages available.
-		glfwSetErrorCallback([] (int code, char const* message) {
-			std::print(stderr, "Error {}: {}\n", code, message);
-		});
+		setupErrorLog();
+		setupWindow(width, height, title);
+		setupScene();
+		while (!glfwWindowShouldClose(m_handler)) {
+			renderLoop(*this);
+		}
+	}
 
+	~Window() {
+		glfwTerminate();
+	}
+
+	// Getters
+	GLFWwindow* handler() const { return m_handler; }
+
+private:
+	void setupErrorLog() {
+		glfwSetErrorCallback([] (int code, char const* message) {
+			std::print(stderr, "GLFW error {}: {}\n", code, message);
+		});
+	}
+
+	void setupWindow(unsigned width, unsigned height, std::string title) {
 		// Initialize with the correct OpenGL versioning.
 		if (!glfwInit()) exit("glfwInit: Unable to start GLFW.\n");
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -33,10 +46,7 @@ public:
 #		endif
 
 		// Create window.
-		m_handler = glfwCreateWindow(
-			startWidth, startHeight,
-			title.c_str(), {}, {}
-		);
+		m_handler = glfwCreateWindow(width, height, title.c_str(), {}, {});
 		if (!m_handler) exit("glfwCreateWindow: Unable to create window.\n");
 		glfwMakeContextCurrent(m_handler);
 
@@ -46,28 +56,16 @@ public:
 		}
 
 		// Set our width and height, and respond when a user resizes.
-		glViewport(0, 0, startWidth, startHeight);
+		glViewport(0, 0, width, height);
 		glfwSetFramebufferSizeCallback(
 			m_handler,
 			[] (GLFWwindow* /**/, int newWidth, int newHeight) {
 				glViewport(0, 0, newWidth, newHeight);
 			}
 		);
-
-		// Immediately start looping after setup.
-		while (!glfwWindowShouldClose(m_handler)) {
-			renderLoop(m_handler);
-		}
 	}
 
-	~Window() {
-		glfwTerminate();
-	}
+	void setupScene() {
 
-private:
-	template <class ... Args>
-	void exit(std::format_string<Args ... > fmt, Args&& ... args) {
-		std::print(stderr, fmt, std::forward<Args>(args) ... );
-		std::exit(EXIT_FAILURE);
 	}
 };

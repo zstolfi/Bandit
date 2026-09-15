@@ -1,14 +1,18 @@
 #include "window.hh"
+#include "util.hh"
+#include <array>
+#include <string_view>
 
-void renderLoop(GLFWwindow* window) {
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-		glfwSetWindowShouldClose(window, true);
+void renderLoop(Window& window) {
+	auto* handler = window.handler();
+	if (glfwGetKey(handler, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+		glfwSetWindowShouldClose(handler, true);
 	}
 
 	glClearColor(0.9, 0.9, 0.9, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	glfwSwapBuffers(window);
+	glfwSwapBuffers(handler);
 	glfwPollEvents();
 }
 
