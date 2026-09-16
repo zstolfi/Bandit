@@ -1,10 +1,12 @@
 #pragma once
 #include <algorithm>
+#include <array>
 #include <print>
 #include <ranges>
 #include <string>
 #include <tuple>
 #include <vector>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 
