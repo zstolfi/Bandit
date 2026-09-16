@@ -8,7 +8,7 @@
 class Window {
 	GLFWwindow* m_handler {};
 	GLuint m_shaderProgram {};
-	GLuint m_VBO {}, m_VAO {};
+	GLuint m_VBO {}, m_VAO {}, m_EBO {};
 
 public:
 	Window(
@@ -141,20 +141,34 @@ private:
 		// Set up geometry.
 		std::vector<GLfloat> vertices {
 		//	   X     Y     Z
-		  	-0.5, -0.5,  0.0,
+		  	 0.5,  0.5,  0.0,
 		  	 0.5, -0.5,  0.0,
-		  	 0.0,  0.5,  0.0,
+		  	-0.5, -0.5,  0.0,
+		  	-0.5,  0.5,  0.0,
+		};
+
+		std::vector<GLuint> indices {
+			0, 1, 3,
+			1, 2, 3,
 		};
 
 		glGenVertexArrays(1, &m_VAO);
+		glGenBuffers(1, &m_VBO);
+		glGenBuffers(1, &m_EBO);
+
 		glBindVertexArray(m_VAO);
 
-		glGenBuffers(1, &m_VBO);
 		glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-
 		glBufferData(
 			GL_ARRAY_BUFFER,
 			vertices.size() * sizeof(GLfloat), vertices.data(),
+			GL_STATIC_DRAW
+		);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
+		glBufferData(
+			GL_ELEMENT_ARRAY_BUFFER,
+			indices.size() * sizeof(GLuint), indices.data(),
 			GL_STATIC_DRAW
 		);
 
