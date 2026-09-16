@@ -74,6 +74,21 @@ auto squarePositions(float pieceSize) {
 
 Rectangle const Stage { -1.0, -0.5, 1.0, 0.5 };
 
+void setup(Window& window) {
+	window.vertices() = {
+	//	   X     Y     Z
+	  	 0.5,  0.5,  0.0, // 0
+	  	 0.5, -0.5,  0.0, // 1
+	  	-0.5, -0.5,  0.0, // 2
+	  	-0.5,  0.5,  0.0, // 3
+	};
+
+	window.indices() = {
+		0, 1, 3,
+		1, 2, 3,
+	};
+}
+
 void renderLoop(Window& window) {
 	auto* handler = window.handler();
 	if (glfwGetKey(handler, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
@@ -82,6 +97,8 @@ void renderLoop(Window& window) {
 
 	glClearColor(0.9, 0.9, 0.9, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
+
+//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	glUseProgram(window.shaderProgram());
 	glBindVertexArray(window.VAO());
@@ -96,6 +113,7 @@ int main(int argc, char const* argv[]) {
 	Window {
 		800, 800,
 		"Hello, 2x2x2!",
+		setup,
 		renderLoop
 	};
 

@@ -10,14 +10,19 @@ class Window {
 	GLuint m_shaderProgram {};
 	GLuint m_VBO {}, m_VAO {}, m_EBO {};
 
+	std::vector<GLfloat> m_vertices {};
+	std::vector<GLuint> m_indices {};
+
 public:
 	Window(
 		unsigned width, unsigned height, std::string title,
+		void (* setup     )(Window&),
 		void (* renderLoop)(Window&)
 	) {
 		setupErrorLog();
 		setupWindow(width, height, title);
-		setupScene();
+		setup(*this);
+		setupObjects();
 		while (!glfwWindowShouldClose(m_handler)) {
 			renderLoop(*this);
 		}
@@ -35,6 +40,10 @@ public:
 	GLuint shaderProgram() const { return m_shaderProgram; };
 	GLuint VBO() const { return m_VBO; };
 	GLuint VAO() const { return m_VAO; };
+	GLuint EBO() const { return m_EBO; };
+
+	std::vector<GLfloat>& vertices() { return m_vertices; }
+	std::vector<GLuint>& indices() { return m_indices; }
 
 private:
 	void setupErrorLog() {
@@ -114,7 +123,7 @@ private:
 		}
 	}
 
-	void setupScene() {
+	void setupObjects() {
 		// Set up shaders.
 		GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 		glShaderSource(vertexShader, 1, &vertexShaderSource, {});
@@ -138,20 +147,7 @@ private:
 		glDeleteShader(vertexShader);
 		glDeleteShader(fragmentShader);
 
-		// Set up geometry.
-		std::vector<GLfloat> vertices {
-		//	   X     Y     Z
-		  	 0.5,  0.5,  0.0,
-		  	 0.5, -0.5,  0.0,
-		  	-0.5, -0.5,  0.0,
-		  	-0.5,  0.5,  0.0,
-		};
-
-		std::vector<GLuint> indices {
-			0, 1, 3,
-			1, 2, 3,
-		};
-
+		// Set up geometry objects.
 		glGenVertexArrays(1, &m_VAO);
 		glGenBuffers(1, &m_VBO);
 		glGenBuffers(1, &m_EBO);
@@ -161,14 +157,14 @@ private:
 		glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
 		glBufferData(
 			GL_ARRAY_BUFFER,
-			vertices.size() * sizeof(GLfloat), vertices.data(),
+			m_vertices.size() * sizeof(GLfloat), m_vertices.data(),
 			GL_STATIC_DRAW
 		);
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
 		glBufferData(
 			GL_ELEMENT_ARRAY_BUFFER,
-			indices.size() * sizeof(GLuint), indices.data(),
+			m_indices.size() * sizeof(GLuint), m_indices.data(),
 			GL_STATIC_DRAW
 		);
 
