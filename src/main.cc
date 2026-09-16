@@ -13,14 +13,15 @@ struct Rectangle {
 // https://www.desmos.com/calculator/6pqhh5uipy
 auto squarePositions(float pieceSize) {
 	auto result = std::vector<std::array<Coord, 4>> {};
+	float const radius = 0.1 * pieceSize;
 	float const s = 0.5, c = 0.5 * std::sqrt(3);
-	float const radius = 0.05 * pieceSize;
+	float const a = s+c, b = s-c;
 
 	auto square = [&] (Coord v, int angle) {
 		auto result = std::array<Coord, 4> {};
 		/**/ if (angle == 0) result = {{{1, 1}, {-1, 1}, {-1, -1}, {1, -1}}};
-		else if (angle == 1) result = {{{s, c}, {-c, s}, {-s, -c}, {c, -s}}};
-		else if (angle == 2) result = {{{c, s}, {-s, c}, {-c, -s}, {s, -c}}};
+		else if (angle == 1) result = {{{a, b}, {-b, a}, {-a, -b}, {b, -a}}};
+		else if (angle == 2) result = {{{b, a}, {-a, b}, {-b, -a}, {a, -b}}};
 		for (Coord& c : result) c.x *= radius, c.y *= radius;
 		for (Coord& c : result) c.x += v.x   , c.y += v.y;
 		return result;
@@ -75,18 +76,21 @@ auto squarePositions(float pieceSize) {
 Rectangle const Stage { -1.0, -0.5, 1.0, 0.5 };
 
 void setup(Window& window) {
-	window.vertices() = {
-	//	   X     Y     Z
-	  	 0.5,  0.5,  0.0, // 0
-	  	 0.5, -0.5,  0.0, // 1
-	  	-0.5, -0.5,  0.0, // 2
-	  	-0.5,  0.5,  0.0, // 3
-	};
-
-	window.indices() = {
-		0, 1, 3,
-		1, 2, 3,
-	};
+	GLuint index = 0;
+	for (auto const& square : squarePositions(0.95)) {
+		for (Coord const& c : square) {
+			window.vertices().push_back(c.x);
+			window.vertices().push_back(c.y);
+			window.vertices().push_back(0.0);
+		}
+		window.indices().push_back(4 * index + 0);
+		window.indices().push_back(4 * index + 1);
+		window.indices().push_back(4 * index + 2);
+		window.indices().push_back(4 * index + 2);
+		window.indices().push_back(4 * index + 3);
+		window.indices().push_back(4 * index + 0);
+		index++;
+	}
 }
 
 void renderLoop(Window& window) {
@@ -102,7 +106,11 @@ void renderLoop(Window& window) {
 
 	glUseProgram(window.shaderProgram());
 	glBindVertexArray(window.VAO());
-	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+	glDrawElements(
+		GL_TRIANGLES,
+		window.indices().size(),
+		GL_UNSIGNED_INT, {}
+	);
 	glBindVertexArray(0);
 
 	glfwSwapBuffers(handler);
