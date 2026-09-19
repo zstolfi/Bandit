@@ -1,6 +1,8 @@
 #pragma once
 #include <algorithm>
 #include <array>
+#include <filesystem>
+#include <fstream>
 #include <print>
 #include <ranges>
 #include <string>
@@ -9,6 +11,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+namespace stdfs = std::filesystem;
 
 template <class ... Args>
 void error(std::format_string<Args ... > fmt, Args&& ... args) {

@@ -82,24 +82,9 @@ private:
 		);
 	}
 
-	// TODO Separate these to their own .glsl files.
-	static char constexpr const* vertexShaderSource {R"(
-		#version 330 core
-		layout (location = 0) in vec3 aPos;
+	stdfs::path const vertexShaderPath = "vertex.glsl";
 
-		void main() {
-			gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-		}
-	)"};
-
-	static char constexpr const* fragmentShaderSource {R"(
-		#version 330 core
-		out vec4 FragColor;
-
-		void main() {
-			FragColor = vec4(1.0, 0.5, 0.2, 1.0);
-		}
-	)"};
+	stdfs::path const fragmentShaderPath = "fragment.glsl";
 
 	enum ObjectType {
 		Shader, Program
@@ -123,14 +108,32 @@ private:
 		}
 	}
 
+	auto loadSource(stdfs::path path) {
+		auto result = std::string {};
+
+		if (std::ifstream file {path}) {
+			std::istreambuf_iterator<char> begin {file}, end {};
+			result = {begin, end};
+		}
+		else error("loadSource: Unable to load {}.\n", path.native());
+
+		return result;
+	}
+
 	void setupObjects() {
 		// Set up shaders.
+		std::string vertexShaderSource = loadSource(vertexShaderPath);
+		std::string fragmentShaderSource = loadSource(fragmentShaderPath);
+		char const* currentSource {};
+
 		GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-		glShaderSource(vertexShader, 1, &vertexShaderSource, {});
+		currentSource = vertexShaderSource.c_str();
+		glShaderSource(vertexShader, 1, &currentSource, {});
 		glCompileShader(vertexShader);
 
 		GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(fragmentShader, 1, &fragmentShaderSource, {});
+		currentSource = fragmentShaderSource.c_str();
+		glShaderSource(fragmentShader, 1, &currentSource, {});
 		glCompileShader(fragmentShader);
 
 		m_shaderProgram = glCreateProgram();

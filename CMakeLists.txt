@@ -47,7 +47,12 @@ target_sources(
 	${PROJECT_NAME}
 	PRIVATE
 	${SOURCE_DIR}/main.cc
+	${SOURCE_DIR}/vertex.glsl
+	${SOURCE_DIR}/fragment.glsl
 )
+
+file(GLOB SHADERS "${SOURCE_DIR}/*.glsl")
+file(COPY ${SHADERS} DESTINATION ${CMAKE_BINARY_DIR}/${PROJECT_NAME})
 
 target_link_libraries(
 	${PROJECT_NAME}
