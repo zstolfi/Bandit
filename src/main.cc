@@ -75,6 +75,15 @@ auto squarePositions(float pieceSize) {
 
 Rectangle const Stage { -1.0, -0.5, 1.0, 0.5 };
 
+std::vector<std::array<float, 3>> colors {
+	{{0.9, 0.9, 0.9}}, // White
+	{{0.9, 0.9, 0.2}}, // Yellow
+	{{0.9, 0.2, 0.2}}, // Red
+	{{0.9, 0.5, 0.2}}, // Orange
+	{{0.2, 0.3, 0.9}}, // Blue
+	{{0.1, 0.9, 0.2}}, // Green
+};
+
 void setup(Window& window) {
 	GLuint index = 0;
 	for (auto const& square : squarePositions(0.95)) {
@@ -82,6 +91,9 @@ void setup(Window& window) {
 			window.vertices().push_back(c.x);
 			window.vertices().push_back(c.y);
 			window.vertices().push_back(0.0);
+			window.vertices().push_back(colors[index/4][0]);
+			window.vertices().push_back(colors[index/4][1]);
+			window.vertices().push_back(colors[index/4][2]);
 		}
 		window.indices().push_back(4 * index + 0);
 		window.indices().push_back(4 * index + 1);
@@ -99,12 +111,18 @@ void renderLoop(Window& window) {
 		glfwSetWindowShouldClose(handler, true);
 	}
 
-	glClearColor(0.9, 0.9, 0.9, 1.0);
+	glClearColor(0.8, 0.8, 0.8, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 //	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+	GLint u_color = glGetUniformLocation(window.shaderProgram(), "u_color");
 	glUseProgram(window.shaderProgram());
+
+	float time = glfwGetTime();
+	float wave = 0.5 + 0.5 * std::sin(time);
+	glUniform4f(u_color, 0.0, wave, 0.0, 1.0);
+
 	glBindVertexArray(window.VAO());
 	glDrawElements(
 		GL_TRIANGLES,
