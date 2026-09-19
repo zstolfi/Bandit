@@ -1,5 +1,6 @@
-#include "window.hh"
+#include "puzzle.hh"
 #include "util.hh"
+#include "window.hh"
 
 struct Coord {
 	float x {}, y {};
@@ -84,16 +85,20 @@ std::vector<std::array<float, 3>> colors {
 	{{0.1, 0.9, 0.2}}, // Green
 };
 
+Puzzle puzzle {};
+bool solved {};
+
 void setup(Window& window) {
 	GLuint index = 0;
-	for (auto const& square : squarePositions(0.95)) {
-		for (Coord const& c : square) {
+	auto const displaySquares = squarePositions(0.95);
+	for (auto const& sticker : puzzle.stickers()) {
+		for (Coord const& c : displaySquares[sticker.orientation()]) {
 			window.vertices().push_back(c.x);
 			window.vertices().push_back(c.y);
 			window.vertices().push_back(0.0);
-			window.vertices().push_back(colors[index/4][0]);
-			window.vertices().push_back(colors[index/4][1]);
-			window.vertices().push_back(colors[index/4][2]);
+			window.vertices().push_back(colors[sticker.color()][0]);
+			window.vertices().push_back(colors[sticker.color()][1]);
+			window.vertices().push_back(colors[sticker.color()][2]);
 		}
 		window.indices().push_back(4 * index + 0);
 		window.indices().push_back(4 * index + 1);
@@ -105,13 +110,25 @@ void setup(Window& window) {
 	}
 }
 
-void renderLoop(Window& window) {
+void processInput(Window& window) {
 	auto* handler = window.handler();
 	if (glfwGetKey(handler, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		glfwSetWindowShouldClose(handler, true);
 	}
 
-	glClearColor(0.8, 0.8, 0.8, 1.0);
+	if (glfwGetKey(handler, GLFW_KEY_A) == GLFW_PRESS) {
+		solved = puzzle.solved();
+	}
+}
+
+void renderLoop(Window& window) {
+	auto* handler = window.handler();
+	processInput(window);
+
+	if (solved) glClearColor(0.5, 0.7, 0.5, 1.0);
+	else glClearColor(0.7, 0.7, 0.7, 1.0);
+
+
 	glClear(GL_COLOR_BUFFER_BIT);
 
 //	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
