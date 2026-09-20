@@ -86,19 +86,23 @@ std::vector<std::array<float, 3>> colors {
 };
 
 Puzzle puzzle {};
-bool solved {};
+bool solved {}, update {};
+
+struct KeyInfo { bool state {}; signed delta {}; };
+std::map<int, KeyInfo> keys {};
 
 void setup(Window& window) {
+	// Puzzle display:
 	GLuint index = 0;
-	auto const displaySquares = squarePositions(0.95);
-	for (auto const& sticker : puzzle.stickers()) {
-		for (Coord const& c : displaySquares[sticker.orientation()]) {
+	for (auto const& square : squarePositions(0.95)) {
+		for (Coord const& c : square) {
+			// This is very inefficient.
 			window.vertices().push_back(c.x);
 			window.vertices().push_back(c.y);
 			window.vertices().push_back(0.0);
-			window.vertices().push_back(colors[sticker.color()][0]);
-			window.vertices().push_back(colors[sticker.color()][1]);
-			window.vertices().push_back(colors[sticker.color()][2]);
+			window.vertices().push_back(colors[index / 4][0]);
+			window.vertices().push_back(colors[index / 4][1]);
+			window.vertices().push_back(colors[index / 4][2]);
 		}
 		window.indices().push_back(4 * index + 0);
 		window.indices().push_back(4 * index + 1);
@@ -108,38 +112,87 @@ void setup(Window& window) {
 		window.indices().push_back(4 * index + 0);
 		index++;
 	}
+
+	// Puzzle controls:
+	glfwSetKeyCallback(window.handler(),
+		[] (GLFWwindow*, int key, int scancode, int action, int mods) {
+			/**/ if (action == GLFW_PRESS) keys[key] = {true, 1};
+			else if (action == GLFW_RELEASE) keys[key] = {false, -1};
+		}
+	);
 }
 
 void processInput(Window& window) {
-	auto* handler = window.handler();
-	if (glfwGetKey(handler, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-		glfwSetWindowShouldClose(handler, true);
-	}
+	update = false;
 
-	if (glfwGetKey(handler, GLFW_KEY_A) == GLFW_PRESS) {
-		solved = puzzle.solved();
+	auto turn = [&] (unsigned index, unsigned times=1) {
+		while (times--) puzzle.turn(puzzle.moves()[index]);
+	};
+
+	static std::map<int, std::function<void ()>> const keyMap {
+		{GLFW_KEY_ESCAPE,
+			[&] { glfwSetWindowShouldClose(window.handler(), true); }
+		},
+		{GLFW_KEY_ENTER, [&] {/**/}},
+
+		{GLFW_KEY_W, [&] { turn(4   ); }}, // L'
+		{GLFW_KEY_S, [&] { turn(4, 3); }}, // L
+		{GLFW_KEY_D, [&] { turn(2   ); }}, // U'
+		{GLFW_KEY_A, [&] { turn(2, 3); }}, // U
+		{GLFW_KEY_Q, [&] { turn(0   ); }}, // F'
+		{GLFW_KEY_E, [&] { turn(0, 3); }}, // F
+
+		{GLFW_KEY_O        , [&] { turn(5, 3); }}, // R
+		{GLFW_KEY_L        , [&] { turn(5   ); }}, // R'
+		{GLFW_KEY_SEMICOLON, [&] { turn(3, 3); }}, // D
+		{GLFW_KEY_K        , [&] { turn(3   ); }}, // D'
+		{GLFW_KEY_I        , [&] { turn(1, 3); }}, // B
+		{GLFW_KEY_P        , [&] { turn(1   ); }}, // B'
+	};
+
+	for (auto& [key, keyInfo] : keys) {
+		if (keyInfo.delta == 1) {
+			update = true;
+			auto entry = keyMap.find(key);
+			if (entry != keyMap.end()) entry->second();
+		}
+		keyInfo.delta = 0;
 	}
 }
 
 void renderLoop(Window& window) {
-	auto* handler = window.handler();
 	processInput(window);
+	if (update) {
+		solved = puzzle.solved();
 
-	if (solved) glClearColor(0.5, 0.7, 0.5, 1.0);
+		// Puzzle display:
+		for (auto const& sticker : puzzle.stickers()) {
+			auto color = colors[sticker.color()];
+			for (unsigned j=0; j<4; j++) {
+				auto index = 4 * sticker.orientation() + j;
+				window.vertices()[6 * index + 3] = color[0];
+				window.vertices()[6 * index + 4] = color[1];
+				window.vertices()[6 * index + 5] = color[2];
+			}
+		}
+
+		// Re-send vertex data. I'm pretty sure this is the wrong way of doing
+		// updating the display of the puzzle. I think the proper solution is
+		// to use the vertex shader to update each sticker's orientation.
+		glBindBuffer(GL_ARRAY_BUFFER, window.VBO());
+		glBufferData(
+			GL_ARRAY_BUFFER,
+			window.vertices().size() * sizeof(GLfloat),
+			window.vertices().data(),
+			GL_STATIC_DRAW
+		);
+	}
+
+	if (solved) glClearColor(0.6, 0.7, 0.6, 1.0);
 	else glClearColor(0.7, 0.7, 0.7, 1.0);
-
-
 	glClear(GL_COLOR_BUFFER_BIT);
 
-//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	GLint u_color = glGetUniformLocation(window.shaderProgram(), "u_color");
 	glUseProgram(window.shaderProgram());
-
-	float time = glfwGetTime();
-	float wave = 0.5 + 0.5 * std::sin(time);
-	glUniform4f(u_color, 0.0, wave, 0.0, 1.0);
-
 	glBindVertexArray(window.VAO());
 	glDrawElements(
 		GL_TRIANGLES,
@@ -148,7 +201,7 @@ void renderLoop(Window& window) {
 	);
 	glBindVertexArray(0);
 
-	glfwSwapBuffers(handler);
+	glfwSwapBuffers(window.handler());
 	glfwPollEvents();
 }
 

@@ -3,9 +3,10 @@
 #include <array>
 #include <filesystem>
 #include <fstream>
+#include <functional>
+#include <map>
 #include <print>
 #include <ranges>
-#include <set>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -13,6 +14,7 @@
 #include <cstdio>
 #include <cstdlib>
 namespace stdfs = std::filesystem;
+namespace stdr = std::ranges;
 
 template <class ... Args>
 void error(std::format_string<Args ... > fmt, Args&& ... args) {
