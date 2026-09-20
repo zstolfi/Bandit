@@ -86,7 +86,7 @@ std::vector<std::array<float, 3>> colors {
 };
 
 Puzzle puzzle {};
-bool solved {}, update {};
+bool solved {}, update {true};
 
 struct KeyInfo { bool state {}; signed delta {}; };
 std::map<int, KeyInfo> keys {};
@@ -133,7 +133,6 @@ void processInput(Window& window) {
 		{GLFW_KEY_ESCAPE,
 			[&] { glfwSetWindowShouldClose(window.handler(), true); }
 		},
-		{GLFW_KEY_ENTER, [&] {/**/}},
 
 		{GLFW_KEY_W, [&] { turn(4   ); }}, // L'
 		{GLFW_KEY_S, [&] { turn(4, 3); }}, // L

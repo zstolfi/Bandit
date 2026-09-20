@@ -22,6 +22,7 @@ public:
 };
 
 // 2x2x2
+// https://www.desmos.com/calculator/6pqhh5uipy
 class Puzzle {
 	using Orientation = unsigned;
 	using Color = unsigned;
