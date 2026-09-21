@@ -1,0 +1,14 @@
+Puzzle: [
+	Name: "Rubik's 2x2"
+	Mechanism: Physical [
+		Internal: [
+			Slice: [Axis: [(0 0 0) (1 0 0)]]
+			Slice: [Axis: [(0 0 0) (0 1 0)]]
+			Slice: [Axis: [(0 0 0) (0 0 1)]]
+		]
+		External: [
+			Hull: Cube(2)
+			Colors: Rubik's
+		]
+	]
+]
