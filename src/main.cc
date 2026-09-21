@@ -174,7 +174,7 @@ void renderLoop(Window& window) {
 			}
 		}
 
-		// Re-send vertex data. I'm pretty sure this is the wrong way of doing
+		// Re-send vertex data. I'm pretty sure this is the wrong way of
 		// updating the display of the puzzle. I think the proper solution is
 		// to use the vertex shader to update each sticker's orientation.
 		glBindBuffer(GL_ARRAY_BUFFER, window.VBO());

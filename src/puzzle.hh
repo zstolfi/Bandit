@@ -6,7 +6,7 @@ class Permutation {
 
 public:
 	Permutation(std::vector<std::vector<unsigned>> cycles) {
-		// TODO: Detect of malformed cycles.
+		// TODO: Detection of malformed cycles.
 		m_word.resize(24);
 		stdr::iota(m_word, 0);
 		for (auto& cycle : cycles) {
