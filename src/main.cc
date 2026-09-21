@@ -123,8 +123,6 @@ void setup(Window& window) {
 }
 
 void processInput(Window& window) {
-	update = false;
-
 	auto turn = [&] (unsigned index, unsigned times=1) {
 		while (times--) puzzle.turn(puzzle.moves()[index]);
 	};
@@ -134,19 +132,19 @@ void processInput(Window& window) {
 			[&] { glfwSetWindowShouldClose(window.handler(), true); }
 		},
 
-		{GLFW_KEY_W, [&] { turn(4   ); }}, // L'
-		{GLFW_KEY_S, [&] { turn(4, 3); }}, // L
-		{GLFW_KEY_D, [&] { turn(2   ); }}, // U'
-		{GLFW_KEY_A, [&] { turn(2, 3); }}, // U
-		{GLFW_KEY_Q, [&] { turn(0   ); }}, // F'
-		{GLFW_KEY_E, [&] { turn(0, 3); }}, // F
+		{GLFW_KEY_E, [&] { turn(4   ); }}, // L'
+		{GLFW_KEY_D, [&] { turn(4, 3); }}, // L
+		{GLFW_KEY_F, [&] { turn(2   ); }}, // U'
+		{GLFW_KEY_S, [&] { turn(2, 3); }}, // U
+		{GLFW_KEY_W, [&] { turn(0   ); }}, // F'
+		{GLFW_KEY_R, [&] { turn(0, 3); }}, // F
 
-		{GLFW_KEY_O        , [&] { turn(5, 3); }}, // R
-		{GLFW_KEY_L        , [&] { turn(5   ); }}, // R'
-		{GLFW_KEY_SEMICOLON, [&] { turn(3, 3); }}, // D
-		{GLFW_KEY_K        , [&] { turn(3   ); }}, // D'
-		{GLFW_KEY_I        , [&] { turn(1, 3); }}, // B
-		{GLFW_KEY_P        , [&] { turn(1   ); }}, // B'
+		{GLFW_KEY_I, [&] { turn(5, 3); }}, // R
+		{GLFW_KEY_K, [&] { turn(5   ); }}, // R'
+		{GLFW_KEY_L, [&] { turn(3, 3); }}, // D
+		{GLFW_KEY_J, [&] { turn(3   ); }}, // D'
+		{GLFW_KEY_U, [&] { turn(1, 3); }}, // B
+		{GLFW_KEY_O, [&] { turn(1   ); }}, // B'
 	};
 
 	for (auto& [key, keyInfo] : keys) {
@@ -162,6 +160,7 @@ void processInput(Window& window) {
 void renderLoop(Window& window) {
 	processInput(window);
 	if (update) {
+		update = false;
 		solved = puzzle.solved();
 
 		// Puzzle display:
