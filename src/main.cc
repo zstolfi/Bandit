@@ -85,7 +85,7 @@ std::vector<std::array<float, 3>> colors {
 	{{0.1, 0.9, 0.2}}, // Green
 };
 
-Puzzle puzzle {};
+Puzzle auto puzzle = Cube2x2x2 {};
 bool solved {}, update {true};
 
 struct KeyInfo { bool state {}; signed delta {}; };

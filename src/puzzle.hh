@@ -5,6 +5,8 @@ class Permutation {
 	std::vector<unsigned> m_word {};
 
 public:
+	Permutation() = default;
+
 	Permutation(std::vector<unsigned> word) {
 		// Take notes on user input.
 		unsigned largest = 0;
@@ -38,12 +40,12 @@ public:
 		// Allow the identity permutation.
 		if (largest == 0) return;
 		// Elements cannot be repeated within or between cycles
-		for (unsigned count : stdv::values {counts}) if (count != 1) {
+		for (unsigned count : counts | stdv::values) if (count != 1) {
 			throw std::invalid_argument {"malformed cycles"};
 		}
 
 		// Construct "word" form of permutation.
-		m_word.resize(largest);
+		m_word.resize(largest+1);
 		stdr::iota(m_word, 0);
 		for (auto& cycle : cycles) {
 			unsigned temp = m_word[cycle.front()];
@@ -74,34 +76,32 @@ template <class T>
 concept Puzzle = std::regular<T> && requires(T const state, T modifiable) {
 	// Bandaging is implemented by allowing moves to sometimes do nothing. That
 	// is, depending on state, they perform the identity permutation.
-	{ state.moves() } -> stdr::range;
-	{ stdr::begin(state.moves()) } -> T::MoveIndex;
-	{ state.bandaged(T::MoveIndex) } -> std::convertible_to<bool>;
+	{ state.moves() } -> RangeOf<typename T::MoveIndex>;
+	{ state.bandaged(typename T::MoveIndex {}) } -> std::convertible_to<bool>;
 
 	// Puzzle state is stored in terms of cubies (unions of stickers). For
 	// example, a 2x2x2 has 8 cubies, each with 24 possible orientations.
-	{ state.cubies() } -> stdr::range;
-	{ stdr::begin(state.cubies()) } -> T::Cubie;
+	{ state.cubies() } -> RangeOf<typename T::Cubie>;
 
 	// Stickers, as the only component with color, are what determine if we are
 	// solved or not.
-	{ state.stickers() } -> stdr::range;
-	{ stdr::begin(state.stickers()) } -> T::Sticker;
-	{ state.solved() } -> convertible_to<bool>;
+	{ state.stickers() } -> RangeOf<typename T::Sticker>;
+	{ state.solved() } -> std::convertible_to<bool>;
 
 	// The only possible way the user can modify our puzzle's state is by
 	// picking it up, and giving it a twist :)
-	{ modifiable.turn(T::MoveIndex) };
+	{ modifiable.turn(typename T::MoveIndex {}) };
 };
 
 // 2x2x2
 // https://www.desmos.com/calculator/6pqhh5uipy
 class Cube2x2x2 {
+public:
 	using Orientation = unsigned;
 	using Color = unsigned;
 
 	class Sticker {
-		friend Puzzle;
+		friend Cube2x2x2;
 		Orientation m_orientation {};
 		Color m_color {};
 
@@ -109,10 +109,17 @@ class Cube2x2x2 {
 		:	m_orientation{o}, m_color{c} {}
 
 	public:
+		auto operator<=>(Sticker const&) const = default;
 		auto const& orientation() const { return m_orientation; }
 		auto const& color() const { return m_color; }
 	};
 
+	class Move : public Permutation {
+		friend Cube2x2x2;
+		using Permutation::Permutation;
+	};
+
+private:
 	std::vector<Sticker> m_stickers {
 		{ 0, 0}, { 1, 0}, { 2, 0}, { 3, 0},
 		{ 4, 1}, { 5, 1}, { 6, 1}, { 7, 1},
@@ -120,11 +127,6 @@ class Cube2x2x2 {
 		{12, 3}, {13, 3}, {14, 3}, {15, 3},
 		{16, 4}, {17, 4}, {18, 4}, {19, 4},
 		{20, 5}, {21, 5}, {22, 5}, {23, 5},
-	};
-
-	class Move : public Permutation {
-		friend Puzzle;
-		using Permutation::Permutation;
 	};
 
 	std::vector<Move> m_moves {
@@ -137,19 +139,23 @@ class Cube2x2x2 {
 	};
 
 public:
-	Puzzle() = default;
+	Cube2x2x2() = default;
+	auto operator<=>(Cube2x2x2 const&) const = default;
 
-	// The only possible way our user can modify this puzzle's state is by
-	// picking it up and twisting it :)
-	Puzzle& turn(Move const& move) {
-		stdr::for_each(m_stickers, [&] (auto& sticker) {
-			sticker.m_orientation = move[sticker.m_orientation];
-		});
-		return *this;
+	using MoveIndex = Move;
+	auto const& moves() const { return m_moves; }
+	bool bandaged(Move const&) const { return false; }
+
+	using Cubie = std::vector<unsigned>;
+	auto cubies() const {
+		auto result = std::vector<Cubie> {};
+		return result = {
+			{ 0,  8, 16}, { 1, 17, 12}, { 2, 20,  9}, { 3, 13, 21},
+			{ 4, 10, 22}, { 5, 23, 14}, { 6, 18, 11}, { 7, 15, 19},
+		};
 	}
 
 	auto const& stickers() const { return m_stickers; }
-	auto const& moves() const { return m_moves; }
 
 	bool solved() const {
 		std::array<std::vector<Sticker>, 6> faces {};
@@ -161,5 +167,11 @@ public:
 			else face.push_back(sticker);
 		}
 		return true;
+	}
+
+	void turn(Move const& move) {
+		stdr::for_each(m_stickers, [&] (auto& sticker) {
+			sticker.m_orientation = move[sticker.m_orientation];
+		});
 	}
 };

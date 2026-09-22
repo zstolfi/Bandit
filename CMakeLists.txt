@@ -66,8 +66,15 @@ set_target_properties(
 	${PROJECT_NAME}
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME}
-	COMPILE_OPTIONS -Werror
 	CXX_STANDARD 23
 	CXX_STANDARD_REQUIRED ON
 	CXX_EXTENSIONS OFF
+)
+
+target_compile_options(
+	${PROJECT_NAME}
+	PRIVATE
+	-Wall
+	-fconcepts-diagnostics-depth=8
+#	-g
 )
