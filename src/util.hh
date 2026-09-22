@@ -1,12 +1,13 @@
 #pragma once
 #include <algorithm>
 #include <array>
+#include <concepts>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <map>
 #include <print>
-#include <ranges>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <vector>

@@ -5,9 +5,45 @@ class Permutation {
 	std::vector<unsigned> m_word {};
 
 public:
+	Permutation(std::vector<unsigned> word) {
+		// Take notes on user input.
+		unsigned largest = 0;
+		std::set<unsigned> included {};
+		for (unsigned i : word) {
+			largest = std::max(largest, i);
+			included.insert(i);
+		}
+
+		// Words contain every element smaller than their size exactly once.
+		if (largest >= word.size() || included.size() != word.size()) {
+			throw std::invalid_argument {"malformed word"};
+		}
+
+		// Construct.
+		m_word = word;
+		normalize();
+	}
+
 	Permutation(std::vector<std::vector<unsigned>> cycles) {
-		// TODO: Detection of malformed cycles.
-		m_word.resize(24);
+		// Take notes on user input.
+		unsigned largest = 0;
+		std::map<unsigned, unsigned> counts {};
+		for (auto const& cycle : cycles) {
+			for (unsigned i : cycle) {
+				largest = std::max(largest, i);
+				counts[i]++;
+			}
+		}
+
+		// Allow the identity permutation.
+		if (largest == 0) return;
+		// Elements cannot be repeated within or between cycles
+		for (unsigned count : stdv::values {counts}) if (count != 1) {
+			throw std::invalid_argument {"malformed cycles"};
+		}
+
+		// Construct "word" form of permutation.
+		m_word.resize(largest);
 		stdr::iota(m_word, 0);
 		for (auto& cycle : cycles) {
 			unsigned temp = m_word[cycle.front()];
@@ -16,14 +52,51 @@ public:
 			}
 			m_word[cycle.back()] = temp;
 		}
+		normalize();
 	}
 
-	unsigned operator[](unsigned i) const { return m_word[i]; }
+	auto operator<=>(Permutation const&) const = default;
+
+	unsigned operator[](unsigned i) const {
+		if (i < m_word.size()) return m_word[i];
+		else return i;
+	}
+
+private:
+	void normalize() {
+		while (!m_word.empty() && m_word.back() == m_word.size()-1) {
+			m_word.pop_back();
+		}
+	}
+};
+
+template <class T>
+concept Puzzle = std::regular<T> && requires(T const state, T modifiable) {
+	// Bandaging is implemented by allowing moves to sometimes do nothing. That
+	// is, depending on state, they perform the identity permutation.
+	{ state.moves() } -> stdr::range;
+	{ stdr::begin(state.moves()) } -> T::MoveIndex;
+	{ state.bandaged(T::MoveIndex) } -> std::convertible_to<bool>;
+
+	// Puzzle state is stored in terms of cubies (unions of stickers). For
+	// example, a 2x2x2 has 8 cubies, each with 24 possible orientations.
+	{ state.cubies() } -> stdr::range;
+	{ stdr::begin(state.cubies()) } -> T::Cubie;
+
+	// Stickers, as the only component with color, are what determine if we are
+	// solved or not.
+	{ state.stickers() } -> stdr::range;
+	{ stdr::begin(state.stickers()) } -> T::Sticker;
+	{ state.solved() } -> convertible_to<bool>;
+
+	// The only possible way the user can modify our puzzle's state is by
+	// picking it up, and giving it a twist :)
+	{ modifiable.turn(T::MoveIndex) };
 };
 
 // 2x2x2
 // https://www.desmos.com/calculator/6pqhh5uipy
-class Puzzle {
+class Cube2x2x2 {
 	using Orientation = unsigned;
 	using Color = unsigned;
 
