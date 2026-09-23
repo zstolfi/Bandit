@@ -65,21 +65,16 @@ template <class T>
 concept Puzzle = std::regular<T> && requires(T const state, T modifiable) {
 	// Bandaging is implemented by allowing moves to sometimes do nothing. That
 	// is, depending on state, they perform the identity permutation.
-	{ state.moves() } -> RangeOf<typename T::MoveIndex>;
-	{ state.bandaged(typename T::MoveIndex {}) } -> std::convertible_to<bool>;
+	{ state.moves() } -> RangeOf<typename T::Move>;
+	{ state.bandaged(typename T::Move {}) } -> std::convertible_to<bool>;
 
-	// Puzzle state is stored in terms of cubies (unions of stickers). For
-	// example, a 2x2x2 has 8 cubies, each with 24 possible orientations.
-	{ state.cubies() } -> RangeOf<typename T::Cubie>;
-
-	// Stickers, as the only component with color, are what determine if we are
-	// solved or not.
+	// Stickers are the sole determiner of whether or not our puzzle is solved.
 	{ state.stickers() } -> RangeOf<typename T::Sticker>;
 	{ state.solved() } -> std::convertible_to<bool>;
 
 	// The only possible way the user can modify our puzzle's state is by
 	// picking it up, and giving it a twist :)
-	{ modifiable.turn(typename T::MoveIndex {}) };
+	{ modifiable.turn(typename T::Move {}) };
 };
 
 // 2x2x2
