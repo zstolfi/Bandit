@@ -81,56 +81,64 @@ concept Puzzle = std::regular<T> && requires(T const state, T modifiable) {
 // https://www.desmos.com/calculator/6pqhh5uipy
 class Cube2x2x2 {
 public:
-	using Orientation = unsigned;
-	using Color = unsigned;
+	enum struct OrientationIndex : unsigned {/* 0 - 23 */};
+	enum struct StickerIndex     : unsigned {/* 0 - 23 */};
+	enum struct FaceIndex        : unsigned {/* 0 - 5 */};
+	enum struct ColorIndex       : unsigned {/* 0 - 5 */};
 
-	class Sticker {
-		friend Cube2x2x2;
-		Orientation m_orientation {};
-		Color m_color {};
-
-		Sticker (Orientation o, Color c)
-		:	m_orientation{o}, m_color{c} {}
-
-	public:
-		auto operator<=>(Sticker const&) const = default;
-		auto const& orientation() const { return m_orientation; }
-		auto const& color() const { return m_color; }
-	};
-
-	class Move : public Permutation {
-		friend Cube2x2x2;
-		using Permutation::Permutation;
+	struct Move {
+		FaceIndex face {6};
 	};
 
 private:
-	std::vector<Sticker> m_stickers {
-		{ 0, 0}, { 1, 0}, { 2, 0}, { 3, 0},
-		{ 4, 1}, { 5, 1}, { 6, 1}, { 7, 1},
-		{ 8, 2}, { 9, 2}, {10, 2}, {11, 2},
-		{12, 3}, {13, 3}, {14, 3}, {15, 3},
-		{16, 4}, {17, 4}, {18, 4}, {19, 4},
-		{20, 5}, {21, 5}, {22, 5}, {23, 5},
-	};
-
-	std::vector<Move> m_moves {
-		{{{ 0,  1,  3,  2}, { 8, 17, 13, 20}, {16, 12, 21,  9}}}, // F'
-		{{{ 5,  7,  6,  4}, {14, 19, 11, 22}, {23, 15, 18, 10}}}, // B'
-		{{{ 8,  9, 10, 11}, { 0, 20,  4, 18}, {16,  2, 22,  6}}}, // U'
-		{{{14, 13, 12, 15}, { 5, 21,  1, 19}, {23,  3, 17,  7}}}, // D'
-		{{{16, 18, 19, 17}, { 0, 11,  7, 12}, { 8,  6, 15,  1}}}, // L'
-		{{{23, 22, 20, 21}, { 5, 10,  2, 13}, {14,  4,  9,  3}}}, // R'
-	};
+	// 2x2x2 state is stored as a shuffling of the 24 stickers.
+	std::array<StickerIndex, 24> m_state {{
+		StickerIndex{ 0}, StickerIndex{ 1}, StickerIndex{ 2}, StickerIndex{ 3},
+		StickerIndex{ 4}, StickerIndex{ 5}, StickerIndex{ 6}, StickerIndex{ 7},
+		StickerIndex{ 8}, StickerIndex{ 9}, StickerIndex{10}, StickerIndex{11},
+		StickerIndex{12}, StickerIndex{13}, StickerIndex{14}, StickerIndex{15},
+		StickerIndex{16}, StickerIndex{17}, StickerIndex{18}, StickerIndex{19},
+		StickerIndex{20}, StickerIndex{21}, StickerIndex{22}, StickerIndex{23},
+	}};
 
 public:
 	Cube2x2x2() = default;
 	auto operator<=>(Cube2x2x2 const&) const = default;
 
-	using MoveIndex = Move;
-	auto const& moves() const { return m_moves; }
-	bool bandaged(Move const&) const { return false; }
+	auto moves() const {
+		auto result = std::array<Move, 6> {};
+		for (unsigned i=0; i<6; i++) result[i] = Move {FaceIndex(i)};
+		return result;
+	}
 
-	using Cubie = std::vector<unsigned>;
+	bool bandaged(Move const&) const {
+		return false;
+	}
+
+	bool solved() const {
+		std::array<std::vector<Sticker>, 6> faces {};
+		for (auto [orientation, sticker] : stdv::zip(stdv::iota(0), m_state)) {
+			auto& face = faces[orientation / 4];
+			if (face.size() > 1
+			&&  stickerColor(face.back()) != stickerColor(sticker)) {
+				return false;
+			}
+			else face.push_back(sticker);
+		}
+		return true;
+	}
+
+	using Sticker = StickerIndex;
+	auto const& stickers() const { return m_state; }
+
+	ColorIndex stickerColor(StickerIndex sticker) const {
+		return ColorIndex(unsigned(sticker)/4);
+	}
+
+	struct Cubie {
+		std::vector<Sticker> stickers {};
+		Cubie(auto ... args): stickers{Sticker(args) ... } {}
+	};
 	auto cubies() const {
 		auto result = std::vector<Cubie> {};
 		return result = {
@@ -139,23 +147,16 @@ public:
 		};
 	}
 
-	auto const& stickers() const { return m_stickers; }
+	void turn(Move move) {
+		static std::array<Permutation, 6> const permutations = {{
+			{{{ 0,  1,  3,  2}, { 8, 17, 13, 20}, {16, 12, 21,  9}}}, // F'
+			{{{ 5,  7,  6,  4}, {14, 19, 11, 22}, {23, 15, 18, 10}}}, // B'
+			{{{ 8,  9, 10, 11}, { 0, 20,  4, 18}, {16,  2, 22,  6}}}, // U'
+			{{{14, 13, 12, 15}, { 5, 21,  1, 19}, {23,  3, 17,  7}}}, // D'
+			{{{16, 18, 19, 17}, { 0, 11,  7, 12}, { 8,  6, 15,  1}}}, // L'
+			{{{23, 22, 20, 21}, { 5, 10,  2, 13}, {14,  4,  9,  3}}}, // R'
+		}};
 
-	bool solved() const {
-		std::array<std::vector<Sticker>, 6> faces {};
-		for (auto const& sticker : m_stickers) {
-			auto& face = faces[sticker.orientation() / 4];
-			if (face.size() > 1 && face.back().color() != sticker.color()) {
-				return false;
-			}
-			else face.push_back(sticker);
-		}
-		return true;
-	}
-
-	void turn(Move const& move) {
-		stdr::for_each(m_stickers, [&] (auto& sticker) {
-			sticker.m_orientation = move[sticker.m_orientation];
-		});
+		permutations[unsigned(move.face)].apply(m_state);
 	}
 };
