@@ -164,13 +164,10 @@ void renderLoop(Window& window) {
 		solved = puzzle.solved();
 
 		// Puzzle display:
-		for (unsigned i=0; i<24; i++) {
-			auto sticker = puzzle.stickers()[i];
-			auto color = colors[unsigned(
-				puzzle.stickerColor(sticker)
-			)];
-			for (unsigned j=0; j<4; j++) {
-				auto index = 4 * i + j;
+		for (auto sticker : puzzle.appearance()) {
+			auto color = colors[sticker.color];
+			for (unsigned i=0; i<4; i++) {
+				auto index = 4 * sticker.orientation + i;
 				window.vertices()[6 * index + 3] = color[0];
 				window.vertices()[6 * index + 4] = color[1];
 				window.vertices()[6 * index + 5] = color[2];
