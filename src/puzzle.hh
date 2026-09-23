@@ -2,73 +2,62 @@
 #include "util.hh"
 
 class Permutation {
-	std::vector<unsigned> m_word {};
+	using Cycle = std::vector<unsigned>;
+	std::vector<Cycle> m_cycles {};
 
 public:
 	Permutation() = default;
+	auto operator<=>(Permutation const&) const = default;
 
-	Permutation(std::vector<unsigned> word) {
+	Permutation(std::vector<Cycle> const& cycles) {
 		// Take notes on user input.
-		unsigned largest = 0;
-		std::set<unsigned> included {};
-		for (unsigned i : word) {
-			largest = std::max(largest, i);
-			included.insert(i);
-		}
-
-		// Words contain every element smaller than their size exactly once.
-		if (largest >= word.size() || included.size() != word.size()) {
-			throw std::invalid_argument {"malformed word"};
-		}
-
-		// Construct.
-		m_word = word;
-		normalize();
-	}
-
-	Permutation(std::vector<std::vector<unsigned>> cycles) {
-		// Take notes on user input.
-		unsigned largest = 0;
 		std::map<unsigned, unsigned> counts {};
 		for (auto const& cycle : cycles) {
 			for (unsigned i : cycle) {
-				largest = std::max(largest, i);
 				counts[i]++;
 			}
 		}
-
-		// Allow the identity permutation.
-		if (largest == 0) return;
 		// Elements cannot be repeated within or between cycles
 		for (unsigned count : counts | stdv::values) if (count != 1) {
 			throw std::invalid_argument {"malformed cycles"};
 		}
-
-		// Construct "word" form of permutation.
-		m_word.resize(largest+1);
-		stdr::iota(m_word, 0);
-		for (auto& cycle : cycles) {
-			unsigned temp = m_word[cycle.front()];
-			for (unsigned i=0; i<cycle.size()-1; i++) {
-				m_word[cycle[i]] = m_word[cycle[i+1]];
-			}
-			m_word[cycle.back()] = temp;
-		}
+		// Assign.
+		m_cycles = cycles;
 		normalize();
 	}
 
-	auto operator<=>(Permutation const&) const = default;
+	unsigned operator[](unsigned index) const {
+		if (m_cycles.empty()) return index;
+		if (index > m_cycles.back()[0]) return index;
+		for (auto const& cycle : m_cycles) {
+			for (unsigned i=0; i<cycle.size(); i++) {
+				if (index == cycle[i]) {
+					return (i+1 < cycle.size())
+					?	cycle[i+1]
+					:	cycle[0];
+				}
+			}
+		}
+		return index;
+	}
 
-	unsigned operator[](unsigned i) const {
-		if (i < m_word.size()) return m_word[i];
-		else return i;
+	template <stdr::random_access_range Range>
+	void apply(Range& input) const {
+		for (auto const& cycle : m_cycles) {
+			for (auto [i, j] : cycle | stdv::pairwise) {
+				std::swap(input[i], input[j]);
+			}
+		}
 	}
 
 private:
 	void normalize() {
-		while (!m_word.empty() && m_word.back() == m_word.size()-1) {
-			m_word.pop_back();
+		for (auto& cycle : m_cycles) {
+			stdr::rotate(cycle, stdr::max_element(cycle));
 		}
+		stdr::sort(m_cycles, stdr::less {},
+			[] (auto const& cycle) { return cycle[0]; }
+		);
 	}
 };
 
