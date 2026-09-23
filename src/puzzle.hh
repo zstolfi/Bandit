@@ -28,7 +28,7 @@ public:
 
 	unsigned operator[](unsigned index) const {
 		if (m_cycles.empty()) return index;
-		if (index > m_cycles.back()[0]) return index;
+		if (index > maxIndex()) return index;
 		for (auto const& cycle : m_cycles) {
 			for (unsigned i=0; i<cycle.size(); i++) {
 				if (index == cycle[i]) {
@@ -43,6 +43,9 @@ public:
 
 	template <stdr::random_access_range Range>
 	void apply(Range& input) const {
+		if (stdr::size(input) < maxIndex()) {
+			throw std::invalid_argument {"input range cannot be permuted"};
+		}
 		for (auto const& cycle : m_cycles) {
 			for (auto [i, j] : cycle | stdv::pairwise) {
 				std::swap(input[i], input[j]);
@@ -51,12 +54,19 @@ public:
 	}
 
 private:
+	unsigned maxIndex() const { // Must NOT be called pre-normalization.
+		return m_cycles.back()[0];
+	}
+
 	void normalize() {
 		for (auto& cycle : m_cycles) {
 			stdr::rotate(cycle, stdr::max_element(cycle));
 		}
 		stdr::sort(m_cycles, stdr::less {},
 			[] (auto const& cycle) { return cycle[0]; }
+		);
+		std::erase_if(m_cycles,
+			[] (Cycle const& c) { return c.size() < 2; }
 		);
 	}
 };
@@ -149,12 +159,12 @@ public:
 
 	void turn(Move move) {
 		static std::array<Permutation, 6> const permutations = {{
-			{{{ 0,  1,  3,  2}, { 8, 17, 13, 20}, {16, 12, 21,  9}}}, // F'
-			{{{ 5,  7,  6,  4}, {14, 19, 11, 22}, {23, 15, 18, 10}}}, // B'
-			{{{ 8,  9, 10, 11}, { 0, 20,  4, 18}, {16,  2, 22,  6}}}, // U'
-			{{{14, 13, 12, 15}, { 5, 21,  1, 19}, {23,  3, 17,  7}}}, // D'
-			{{{16, 18, 19, 17}, { 0, 11,  7, 12}, { 8,  6, 15,  1}}}, // L'
-			{{{23, 22, 20, 21}, { 5, 10,  2, 13}, {14,  4,  9,  3}}}, // R'
+			{{{ 0,  2,  3,  1}, { 8, 20, 13, 17}, {16,  9, 21, 12}}}, // F'
+			{{{ 5,  4,  6,  7}, {14, 22, 11, 19}, {23, 10, 18, 15}}}, // B'
+			{{{ 8, 11, 10,  9}, { 0, 18,  4, 20}, {16,  6, 22,  2}}}, // U'
+			{{{14, 15, 12, 13}, { 5, 19,  1, 21}, {23,  7, 17,  3}}}, // D'
+			{{{16, 17, 19, 18}, { 0, 12,  7, 11}, { 8,  1, 15,  6}}}, // L'
+			{{{23, 21, 20, 22}, { 5, 13,  2, 10}, {14,  3,  9,  4}}}, // R'
 		}};
 
 		permutations[unsigned(move.face)].apply(m_state);
