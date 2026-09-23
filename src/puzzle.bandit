@@ -1,10 +1,10 @@
 Puzzle: [
 	Name: "Rubik's 2x2"
-	Mechanism: Physical [
+	Mechanism: Spherical [
 		Internal: [
-			Slice: [Axis: [(0 0 0) (1 0 0)]]
-			Slice: [Axis: [(0 0 0) (0 1 0)]]
-			Slice: [Axis: [(0 0 0) (0 0 1)]]
+			Slice: [Axis: (x = 0)]
+			Slice: [Axis: (y = 0)]
+			Slice: [Axis: (z = 0)]
 		]
 		External: [
 			Hull: Cube(2)
