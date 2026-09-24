@@ -52,6 +52,23 @@ public:
 	std::vector<GLfloat>& vertices() { return vertices_m; }
 	std::vector<GLuint>& indices() { return indices_m; }
 
+	// GLFW specific
+	template <class ... Args> using CallbackFn = void (GLFWwindow*, Args ... );
+	template <class Fn> using CallbackSetterFn = Fn* (GLFWwindow*, Fn*);
+
+	template <class ... Args>
+	void bind(
+		CallbackSetterFn<CallbackFn<Args ... >>& glfwCallbackSetter,
+		auto&& userFunction
+	) {
+		static auto uf = userFunction;
+		glfwCallbackSetter(handle_m,
+			[] (GLFWwindow*, Args ... args) {
+				uf(args ... );
+			}
+		);
+	}
+
 private:
 	void setupErrorLog() {
 		glfwSetErrorCallback([] (int code, char const* message) {
@@ -74,10 +91,6 @@ private:
 		if (!handle_m) exit("glfwCreateWindow: Unable to create window.\n");
 		glfwMakeContextCurrent(handle_m);
 
-		// Allow the user of this Window class to access ourselves within a GLFW
-		// callback function.
-		glfwSetWindowUserPointer(handle_m, (void*)this);
-
 		// GLAD is used to make calling GL functions easier.
 		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 			exit("gladLoadGLLoader: Unable to start GLAD.\n");
@@ -85,9 +98,8 @@ private:
 
 		// Set our width and height, and respond when a user resizes.
 		glViewport(0, 0, width, height);
-		glfwSetFramebufferSizeCallback(
-			handle_m,
-			[] (GLFWwindow* /**/, int newWidth, int newHeight) {
+		bind(glfwSetFramebufferSizeCallback,
+			[&] (int newWidth, int newHeight) {
 				glViewport(0, 0, newWidth, newHeight);
 			}
 		);

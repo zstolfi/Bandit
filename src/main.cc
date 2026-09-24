@@ -115,23 +115,12 @@ void setup(AppWindow& window, AppState& state) {
 	}
 
 	// Record of pressed keys:
-	glfwSetKeyCallback(window.handle(),
-		[] (GLFWwindow* h, int key, int scancode, int action, int mods) {
-			AppWindow& window = *(AppWindow*)glfwGetWindowUserPointer(h);
-			auto& keys = window.appState().keys;
-			/**/ if (action == GLFW_PRESS) keys[key] = {true, 1};
-			else if (action == GLFW_RELEASE) keys[key] = {false, -1};
+	window.bind(glfwSetKeyCallback,
+		[&] (int key, int scancode, int action, int mods) {
+			/**/ if (action == GLFW_PRESS) state.keys[key] = {true, 1};
+			else if (action == GLFW_RELEASE) state.keys[key] = {false, -1};
 		}
 	);
-
-	// TODO: Implement this syntax.
-//		window.bind<glfwSetKeyCallback>(
-//			[] (AppWindow& window, int key, int scancode, int action, int mods) {
-//				auto& keys = window.appState().keys;
-//				/**/ if (action == GLFW_PRESS) keys[key] = {true, 1};
-//				else if (action == GLFW_RELEASE) keys[key] = {false, -1};
-//			}
-//		);
 };
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
