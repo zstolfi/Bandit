@@ -77,6 +77,8 @@ auto const colors = std::vector<std::array<float, 3>> {
 };
 
 struct AppState {
+	std::vector<std::string_view> args {};
+
 	using Puzzle = Cube2x2x2;
 	Puzzle puzzle {};
 	bool solved {}, update {true};
@@ -88,6 +90,9 @@ struct AppState {
 using AppWindow = Window<AppState>;
 
 void setup(AppWindow& window, AppState& state) {
+	for (auto arg : state.args) std::print("{}\t", arg);
+	std::print("\n");
+
 	// Puzzle display:
 	GLuint index = 0;
 	for (auto const& square : squarePositions(0.95)) {
@@ -217,12 +222,13 @@ void renderLoop(AppWindow& window, AppState& state) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 int main(int argc, char const* argv[]) {
+	std::vector<std::string_view> args {argv, argv+argc};
 	AppWindow {
 		800, 800,
 		"Hello, 2x2x2!",
 		setup,
 		renderLoop,
-		AppState {}
+		AppState {args}
 	};
 
 	return EXIT_SUCCESS;
