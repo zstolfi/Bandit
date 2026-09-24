@@ -85,40 +85,39 @@ struct AppState {
 	std::map<int, KeyInfo> keys {};
 };
 
-int main(int argc, char const* argv[]) {
-	auto setup = [&] (Window& window) {
-		// Puzzle display:
-		GLuint index = 0;
-		for (auto const& square : squarePositions(0.95)) {
-			for (auto const& coord : square) {
-				// This is very inefficient.
-				window.vertices().push_back(coord.x);
-				window.vertices().push_back(coord.y);
-				window.vertices().push_back(0.0);
-				window.vertices().push_back(colors[index / 4][0]);
-				window.vertices().push_back(colors[index / 4][1]);
-				window.vertices().push_back(colors[index / 4][2]);
-			}
-			window.indices().push_back(4 * index + 0);
-			window.indices().push_back(4 * index + 1);
-			window.indices().push_back(4 * index + 2);
-			window.indices().push_back(4 * index + 2);
-			window.indices().push_back(4 * index + 3);
-			window.indices().push_back(4 * index + 0);
-			index++;
+void setup(Window& window) {
+	// Puzzle display:
+	GLuint index = 0;
+	for (auto const& square : squarePositions(0.95)) {
+		for (auto const& coord : square) {
+			// This is very inefficient.
+			window.vertices().push_back(coord.x);
+			window.vertices().push_back(coord.y);
+			window.vertices().push_back(0.0);
+			window.vertices().push_back(colors[index / 4][0]);
+			window.vertices().push_back(colors[index / 4][1]);
+			window.vertices().push_back(colors[index / 4][2]);
 		}
+		window.indices().push_back(4 * index + 0);
+		window.indices().push_back(4 * index + 1);
+		window.indices().push_back(4 * index + 2);
+		window.indices().push_back(4 * index + 2);
+		window.indices().push_back(4 * index + 3);
+		window.indices().push_back(4 * index + 0);
+		index++;
+	}
 
-		// Record of pressed keys:
-		glfwSetKeyCallback(window.handle(),
-			[] (GLFWwindow* h, int key, int scancode, int action, int mods) {
-				Window& window = *(Window*)glfwGetWindowUserPointer(h);
-				auto& keys = window.get<AppState>().keys;
-				/**/ if (action == GLFW_PRESS) keys[key] = {true, 1};
-				else if (action == GLFW_RELEASE) keys[key] = {false, -1};
-			}
-		);
+	// Record of pressed keys:
+	glfwSetKeyCallback(window.handle(),
+		[] (GLFWwindow* h, int key, int scancode, int action, int mods) {
+			Window& window = *(Window*)glfwGetWindowUserPointer(h);
+			auto& keys = window.get<AppState>().keys;
+			/**/ if (action == GLFW_PRESS) keys[key] = {true, 1};
+			else if (action == GLFW_RELEASE) keys[key] = {false, -1};
+		}
+	);
 
-		// TODO: Implement this syntax.
+	// TODO: Implement this syntax.
 //		window.bind<glfwSetKeyCallback>(
 //			[] (Window& window, int key, int scancode, int action, int mods) {
 //				auto& keys = window.get<AppState>().keys;
@@ -126,98 +125,99 @@ int main(int argc, char const* argv[]) {
 //				else if (action == GLFW_RELEASE) keys[key] = {false, -1};
 //			}
 //		);
-	};
+};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-	auto processInput = [&] (Window& window) {
-		auto& state = window.get<AppState>();
+void processInput(Window& window) {
+	auto& state = window.get<AppState>();
 
-		auto turn = [&] (unsigned index, unsigned times=1) {
-			while (times--) state.puzzle.turn(state.puzzle.moves()[index]);
-		};
-
-		static std::map<int, std::function<void ()>> const keyMap {
-			{GLFW_KEY_ESCAPE,
-				[&] { glfwSetWindowShouldClose(window.handle(), true); }
-			},
-
-			{GLFW_KEY_E, [&] { turn(4   ); }}, // L'
-			{GLFW_KEY_D, [&] { turn(4, 3); }}, // L
-			{GLFW_KEY_F, [&] { turn(2   ); }}, // U'
-			{GLFW_KEY_S, [&] { turn(2, 3); }}, // U
-			{GLFW_KEY_W, [&] { turn(0   ); }}, // F'
-			{GLFW_KEY_R, [&] { turn(0, 3); }}, // F
-
-			{GLFW_KEY_I, [&] { turn(5, 3); }}, // R
-			{GLFW_KEY_K, [&] { turn(5   ); }}, // R'
-			{GLFW_KEY_L, [&] { turn(3, 3); }}, // D
-			{GLFW_KEY_J, [&] { turn(3   ); }}, // D'
-			{GLFW_KEY_U, [&] { turn(1, 3); }}, // B
-			{GLFW_KEY_O, [&] { turn(1   ); }}, // B'
-		};
-
-		for (auto& [key, keyInfo] : state.keys) {
-			if (keyInfo.delta == 1) {
-				state.update = true;
-				auto entry = keyMap.find(key);
-				if (entry != keyMap.end()) entry->second();
-			}
-			keyInfo.delta = 0;
-		}
+	auto turn = [&] (unsigned index, unsigned times=1) {
+		while (times--) state.puzzle.turn(state.puzzle.moves()[index]);
 	};
+
+	static std::map<int, std::function<void ()>> const keyMap {
+		{GLFW_KEY_ESCAPE,
+			[&] { glfwSetWindowShouldClose(window.handle(), true); }
+		},
+
+		{GLFW_KEY_E, [&] { turn(4   ); }}, // L'
+		{GLFW_KEY_D, [&] { turn(4, 3); }}, // L
+		{GLFW_KEY_F, [&] { turn(2   ); }}, // U'
+		{GLFW_KEY_S, [&] { turn(2, 3); }}, // U
+		{GLFW_KEY_W, [&] { turn(0   ); }}, // F'
+		{GLFW_KEY_R, [&] { turn(0, 3); }}, // F
+
+		{GLFW_KEY_I, [&] { turn(5, 3); }}, // R
+		{GLFW_KEY_K, [&] { turn(5   ); }}, // R'
+		{GLFW_KEY_L, [&] { turn(3, 3); }}, // D
+		{GLFW_KEY_J, [&] { turn(3   ); }}, // D'
+		{GLFW_KEY_U, [&] { turn(1, 3); }}, // B
+		{GLFW_KEY_O, [&] { turn(1   ); }}, // B'
+	};
+
+	for (auto& [key, keyInfo] : state.keys) {
+		if (keyInfo.delta == 1) {
+			state.update = true;
+			auto entry = keyMap.find(key);
+			if (entry != keyMap.end()) entry->second();
+		}
+		keyInfo.delta = 0;
+	}
+};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-	auto renderLoop = [&] (Window& window) {
-		auto& state = window.get<AppState>();
-		processInput(window);
-		if (state.update) {
-			state.update = false;
-			state.solved = state.puzzle.solved();
+void renderLoop(Window& window) {
+	auto& state = window.get<AppState>();
+	processInput(window);
+	if (state.update) {
+		state.update = false;
+		state.solved = state.puzzle.solved();
 
-			// Puzzle display:
-			for (auto sticker : state.puzzle.appearance()) {
-				auto color = colors[sticker.color];
-				for (unsigned i=0; i<4; i++) {
-					auto index = 4 * sticker.orientation + i;
-					window.vertices()[6 * index + 3] = color[0];
-					window.vertices()[6 * index + 4] = color[1];
-					window.vertices()[6 * index + 5] = color[2];
-				}
+		// Puzzle display:
+		for (auto sticker : state.puzzle.appearance()) {
+			auto color = colors[sticker.color];
+			for (unsigned i=0; i<4; i++) {
+				auto index = 4 * sticker.orientation + i;
+				window.vertices()[6 * index + 3] = color[0];
+				window.vertices()[6 * index + 4] = color[1];
+				window.vertices()[6 * index + 5] = color[2];
 			}
-
-			// Re-send vertex data. I'm pretty sure this is the wrong way of
-			// updating the display of the puzzle. I think the proper solution
-			// is to use the vertex shader to update each sticker's orientation.
-			glBindBuffer(GL_ARRAY_BUFFER, window.VBO());
-			glBufferData(
-				GL_ARRAY_BUFFER,
-				window.vertices().size() * sizeof(GLfloat),
-				window.vertices().data(),
-				GL_STATIC_DRAW
-			);
 		}
 
-		if (state.solved) glClearColor(0.6, 0.7, 0.6, 1.0);
-		else glClearColor(0.7, 0.7, 0.7, 1.0);
-		glClear(GL_COLOR_BUFFER_BIT);
-
-		glUseProgram(window.shaderProgram());
-		glBindVertexArray(window.VAO());
-		glDrawElements(
-			GL_TRIANGLES,
-			window.indices().size(),
-			GL_UNSIGNED_INT, {}
+		// Re-send vertex data. I'm pretty sure this is the wrong way of
+		// updating the display of the puzzle. I think the proper solution is
+		// to use the vertex shader to update each sticker's orientation.
+		glBindBuffer(GL_ARRAY_BUFFER, window.VBO());
+		glBufferData(
+			GL_ARRAY_BUFFER,
+			window.vertices().size() * sizeof(GLfloat),
+			window.vertices().data(),
+			GL_STATIC_DRAW
 		);
-		glBindVertexArray(0);
+	}
 
-		glfwSwapBuffers(window.handle());
-		glfwPollEvents();
-	};
+	if (state.solved) glClearColor(0.6, 0.7, 0.6, 1.0);
+	else glClearColor(0.7, 0.7, 0.7, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	glUseProgram(window.shaderProgram());
+	glBindVertexArray(window.VAO());
+	glDrawElements(
+		GL_TRIANGLES,
+		window.indices().size(),
+		GL_UNSIGNED_INT, {}
+	);
+	glBindVertexArray(0);
+
+	glfwSwapBuffers(window.handle());
+	glfwPollEvents();
+};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+int main(int argc, char const* argv[]) {
 	Window {
 		800, 800,
 		"Hello, 2x2x2!",
