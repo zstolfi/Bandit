@@ -2,8 +2,9 @@
 #include "util.hh"
 
 class Permutation {
-	using Cycle = std::vector<unsigned>;
-	std::vector<Cycle> m_cycles {};
+	using Index = unsigned;
+	using Cycle = std::vector<Index>;
+	std::vector<Cycle> cycles_m {};
 
 public:
 	Permutation() = default;
@@ -11,42 +12,41 @@ public:
 
 	Permutation(std::vector<Cycle> const& cycles) {
 		// Take notes on user input.
-		std::map<unsigned, unsigned> counts {};
+		std::map<Index, unsigned> counts {};
 		for (auto const& cycle : cycles) {
-			for (unsigned i : cycle) {
+			for (Index i : cycle) {
 				counts[i]++;
 			}
 		}
 		// Elements cannot be repeated within or between cycles
 		for (unsigned count : counts | stdv::values) if (count != 1) {
-			throw std::invalid_argument {"malformed cycles"};
+			throw std::invalid_argument {"invalid cycle notation"};
 		}
 		// Assign.
-		m_cycles = cycles;
+		cycles_m = cycles;
 		normalize();
 	}
 
-	unsigned operator[](unsigned index) const {
-		if (m_cycles.empty()) return index;
-		if (index > maxIndex()) return index;
-		for (auto const& cycle : m_cycles) {
-			for (unsigned i=0; i<cycle.size(); i++) {
-				if (cycle[i] == index) {
-					return (i+1 < cycle.size())
-					?	cycle[i+1]
+	Index operator[](Index i) const {
+		if (i > maxIndex()) return i;
+		for (auto const& cycle : cycles_m) {
+			for (unsigned j=0; j<cycle.size(); j++) {
+				if (cycle[j] == i) {
+					return (j+1 < cycle.size())
+					?	cycle[j+1]
 					:	cycle[0];
 				}
 			}
 		}
-		return index;
+		return i;
 	}
 
 	template <stdr::random_access_range Range>
-	void apply(Range& input) const {
+	void shuffle(Range& input) const {
 		if (stdr::size(input) < maxIndex()) {
-			throw std::invalid_argument {"input range cannot be permuted"};
+			throw std::invalid_argument {"invalidly sized input range"};
 		}
-		for (auto const& cycle : m_cycles) {
+		for (auto const& cycle : cycles_m) {
 			for (auto [i, j] : cycle | stdv::pairwise) {
 				std::swap(input[i], input[j]);
 			}
@@ -54,19 +54,20 @@ public:
 	}
 
 private:
-	unsigned maxIndex() const { // Must NOT be called pre-normalization.
-		return m_cycles.back()[0];
+	Index maxIndex() const { // Must NOT be called pre-normalization.
+		if (cycles_m.empty()) return 0;
+		return cycles_m.back()[0];
 	}
 
 	void normalize() {
-		for (auto& cycle : m_cycles) {
+		for (auto& cycle : cycles_m) {
 			stdr::rotate(cycle, stdr::max_element(cycle));
 		}
-		stdr::sort(m_cycles, stdr::less {},
+		stdr::sort(cycles_m, stdr::less {},
 			[] (auto const& cycle) { return cycle[0]; }
 		);
-		std::erase_if(m_cycles,
-			[] (Cycle const& c) { return c.size() < 2; }
+		std::erase_if(cycles_m,
+			[] (auto const& cycle) { return cycle.size() < 2; }
 		);
 	}
 };

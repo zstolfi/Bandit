@@ -3,7 +3,7 @@
 #include "math.hh"
 
 template <class T>
-concept Puzzle = std::regular<T> && requires(
+concept PuzzleType = std::regular<T> && requires(
 	T const state, T modifiable,
 	typename T::Move move
 ) {
@@ -24,7 +24,7 @@ concept Puzzle = std::regular<T> && requires(
 	{ state.solved() } -> std::convertible_to<bool>;
 };
 
-// 2x2x2
+// 2x2x2 Rubik's Cube
 // https://www.desmos.com/calculator/6pqhh5uipy
 class Cube2x2x2 {
 	// Index denotes orientation, value determines sticker color.

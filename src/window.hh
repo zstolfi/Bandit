@@ -6,44 +6,44 @@
 // Programs right now can only have one monolithic window. When this window
 // closes, everything closes.
 class Window {
-	GLFWwindow* m_handler {};
-	GLuint m_shaderProgram {};
-	GLuint m_VBO {}, m_VAO {}, m_EBO {};
+	GLFWwindow* handle_m {};
+	GLuint shaderProgram_m {};
+	GLuint VBO_m {}, VAO_m {}, EBO_m {};
 
-	std::vector<GLfloat> m_vertices {};
-	std::vector<GLuint> m_indices {};
+	std::vector<GLfloat> vertices_m {};
+	std::vector<GLuint> indices_m {};
 
 public:
 	Window(
 		unsigned width, unsigned height, std::string title,
-		void (* setup     )(Window&),
-		void (* renderLoop)(Window&)
+		std::function<void (Window&)> setup,
+		std::function<void (Window&)> renderLoop
 	) {
 		setupErrorLog();
 		setupWindow(width, height, title);
 		setup(*this);
 		setupObjects();
-		while (!glfwWindowShouldClose(m_handler)) {
+		while (!glfwWindowShouldClose(handle_m)) {
 			renderLoop(*this);
 		}
 	}
 
 	~Window() {
-		glDeleteBuffers(1, &m_VBO);
-		glDeleteVertexArrays(1, &m_VAO);
-		glDeleteProgram(m_shaderProgram);
+		glDeleteBuffers(1, &VBO_m);
+		glDeleteVertexArrays(1, &VAO_m);
+		glDeleteProgram(shaderProgram_m);
 		glfwTerminate();
 	}
 
 	// Getters
-	GLFWwindow* handler() const { return m_handler; }
-	GLuint shaderProgram() const { return m_shaderProgram; };
-	GLuint VBO() const { return m_VBO; };
-	GLuint VAO() const { return m_VAO; };
-	GLuint EBO() const { return m_EBO; };
+	GLFWwindow* handle() const { return handle_m; }
+	GLuint shaderProgram() const { return shaderProgram_m; };
+	GLuint VBO() const { return VBO_m; };
+	GLuint VAO() const { return VAO_m; };
+	GLuint EBO() const { return EBO_m; };
 
-	std::vector<GLfloat>& vertices() { return m_vertices; }
-	std::vector<GLuint>& indices() { return m_indices; }
+	std::vector<GLfloat>& vertices() { return vertices_m; }
+	std::vector<GLuint>& indices() { return indices_m; }
 
 private:
 	void setupErrorLog() {
@@ -63,9 +63,9 @@ private:
 #		endif
 
 		// Create window.
-		m_handler = glfwCreateWindow(width, height, title.c_str(), {}, {});
-		if (!m_handler) exit("glfwCreateWindow: Unable to create window.\n");
-		glfwMakeContextCurrent(m_handler);
+		handle_m = glfwCreateWindow(width, height, title.c_str(), {}, {});
+		if (!handle_m) exit("glfwCreateWindow: Unable to create window.\n");
+		glfwMakeContextCurrent(handle_m);
 
 		// GLAD is used to make calling GL functions easier.
 		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
@@ -75,7 +75,7 @@ private:
 		// Set our width and height, and respond when a user resizes.
 		glViewport(0, 0, width, height);
 		glfwSetFramebufferSizeCallback(
-			m_handler,
+			handle_m,
 			[] (GLFWwindow* /**/, int newWidth, int newHeight) {
 				glViewport(0, 0, newWidth, newHeight);
 			}
@@ -136,38 +136,38 @@ private:
 		glShaderSource(fragmentShader, 1, &currentSource, {});
 		glCompileShader(fragmentShader);
 
-		m_shaderProgram = glCreateProgram();
-		glAttachShader(m_shaderProgram, vertexShader);
-		glAttachShader(m_shaderProgram, fragmentShader);
-		glLinkProgram(m_shaderProgram);
+		shaderProgram_m = glCreateProgram();
+		glAttachShader(shaderProgram_m, vertexShader);
+		glAttachShader(shaderProgram_m, fragmentShader);
+		glLinkProgram(shaderProgram_m);
 
 		// Check for errors.
 		checkObject<Shader>(vertexShader, "Vertex shader");
 		checkObject<Shader>(fragmentShader, "Fragment shader");
-		checkObject<Program>(m_shaderProgram, "Shader program");
+		checkObject<Program>(shaderProgram_m, "Shader program");
 
 		// TODO: Maybe handle this with RAII?
 		glDeleteShader(vertexShader);
 		glDeleteShader(fragmentShader);
 
 		// Set up geometry objects.
-		glGenVertexArrays(1, &m_VAO);
-		glGenBuffers(1, &m_VBO);
-		glGenBuffers(1, &m_EBO);
+		glGenVertexArrays(1, &VAO_m);
+		glGenBuffers(1, &VBO_m);
+		glGenBuffers(1, &EBO_m);
 
-		glBindVertexArray(m_VAO);
+		glBindVertexArray(VAO_m);
 
-		glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
 		glBufferData(
 			GL_ARRAY_BUFFER,
-			m_vertices.size() * sizeof(GLfloat), m_vertices.data(),
+			vertices_m.size() * sizeof(GLfloat), vertices_m.data(),
 			GL_STATIC_DRAW
 		);
 
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_EBO);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_m);
 		glBufferData(
 			GL_ELEMENT_ARRAY_BUFFER,
-			m_indices.size() * sizeof(GLuint), m_indices.data(),
+			indices_m.size() * sizeof(GLuint), indices_m.data(),
 			GL_STATIC_DRAW
 		);
 
