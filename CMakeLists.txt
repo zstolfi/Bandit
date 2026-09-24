@@ -76,5 +76,5 @@ target_compile_options(
 	PRIVATE
 	-Wall
 	-fconcepts-diagnostics-depth=8
-#	-g
+	-g
 )

@@ -37,7 +37,7 @@ void exit(std::format_string<Args ... > fmt, Args&& ... args) {
 /* ~~ Concepts ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 template <class C, class T>
-concept RangeOf =
+concept IsRangeOf =
 	stdr::range<std::remove_cvref_t<C>> &&
 	std::convertible_to<
 		stdr::range_value_t<std::remove_cvref_t<C>>,

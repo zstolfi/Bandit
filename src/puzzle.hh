@@ -3,17 +3,17 @@
 #include "math.hh"
 
 template <class T>
-concept PuzzleType = std::regular<T> && requires(
+concept IsPuzzle = std::regular<T> && requires(
 	T const state, T modifiable,
-	typename T::Move move
+	T::Move move
 ) {
 	// The only possible way the user can modify our puzzle's state is by
 	// picking it up, and giving it a twist :)
 	modifiable.turn(move);
 
-	// Every move advertised by our puzzle is allowed to be tried. It's just that
-	// bandaged puzzles will sometimes "no nothing".
-	{ state.moves() } -> RangeOf<typename T::Move>;
+	// Every move advertised by our puzzle is allowed to be tried. It's just
+	// that bandaged puzzles will sometimes "no nothing".
+	{ state.moves() } -> IsRangeOf<typename T::Move>;
 
 	// We can report back any appearance information we'd like. It's usually a
 	// good idea to make solved() depend on this data.
@@ -38,6 +38,9 @@ class Cube2x2x2 {
 		5, 5, 5, 5,
 	};
 
+	// Every 2x2x2 has unchanging properties. Because we only want to store
+	// essential state in this class, properties_m is a static/global variable.
+	// For run-time generated puzzles singletons can be used instead.
 	struct Properties {
 		struct Move { unsigned face {}; };
 		std::array<Move, 6> moves {};
@@ -85,7 +88,7 @@ public:
 	bool solved() const {
 		using Color = unsigned;
 		std::array<std::vector<Color>, 6> faces {};
-		for (auto [orientation, color] : appearance()) {
+		for (auto [orientation, color]: appearance()) {
 			auto& face = faces[orientation / 4];
 			if (face.size() > 1 && face.back() != color) {
 				return false;

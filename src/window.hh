@@ -34,15 +34,21 @@ public:
 	}
 
 	~Window() {
-		glDeleteBuffers(1, &VBO_m);
 		glDeleteVertexArrays(1, &VAO_m);
+		glDeleteBuffers(1, &VBO_m);
+		glDeleteBuffers(1, &EBO_m);
 		glDeleteProgram(shaderProgram_m);
 		glfwTerminate();
 	}
 
+	void close() {
+		glfwSetWindowShouldClose(handle_m, true);
+	}
+
 	// Getters
 	GLFWwindow* handle() const { return handle_m; }
-	AppState& appState() { return appState_m; }
+	AppState& appState() /* */ { return appState_m; }
+	AppState& appState() const { return appState_m; }
 
 	GLuint shaderProgram() const { return shaderProgram_m; };
 	GLuint VBO() const { return VBO_m; };
@@ -59,13 +65,31 @@ public:
 	template <class ... Args>
 	void bind(
 		CallbackSetterFn<CallbackFn<Args ... >>& glfwCallbackSetter,
-		auto&& userFunction
+		auto const& userFunction
 	) {
 		static auto uf = userFunction;
 		glfwCallbackSetter(handle_m,
 			[] (GLFWwindow*, Args ... args) {
 				uf(args ... );
 			}
+		);
+	}
+
+	void updateVertices() {
+		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
+		glBufferData(
+			GL_ARRAY_BUFFER,
+			vertices_m.size() * sizeof(GLfloat), vertices_m.data(),
+			GL_STATIC_DRAW
+		);
+	}
+
+	void updateIndices() {
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_m);
+		glBufferData(
+			GL_ELEMENT_ARRAY_BUFFER,
+			indices_m.size() * sizeof(GLuint), indices_m.data(),
+			GL_STATIC_DRAW
 		);
 	}
 
@@ -86,12 +110,12 @@ private:
  			glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #		endif
 
-		// Create window.
+		// Create our window, keeping track of its handle.
 		handle_m = glfwCreateWindow(width, height, title.c_str(), {}, {});
 		if (!handle_m) exit("glfwCreateWindow: Unable to create window.\n");
 		glfwMakeContextCurrent(handle_m);
 
-		// GLAD is used to make calling GL functions easier.
+		// Load in GLAD for normal looking GL function calls.
 		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 			exit("gladLoadGLLoader: Unable to start GLAD.\n");
 		}
@@ -179,29 +203,17 @@ private:
 		glGenBuffers(1, &EBO_m);
 
 		glBindVertexArray(VAO_m);
+		updateVertices();
+		updateIndices();
 
-		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
-		glBufferData(
-			GL_ARRAY_BUFFER,
-			vertices_m.size() * sizeof(GLfloat), vertices_m.data(),
-			GL_STATIC_DRAW
-		);
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_m);
-		glBufferData(
-			GL_ELEMENT_ARRAY_BUFFER,
-			indices_m.size() * sizeof(GLuint), indices_m.data(),
-			GL_STATIC_DRAW
-		);
-
-		// Position attribute:
+		// Define position attribute.
 		glVertexAttribPointer(
 			0, 3, GL_FLOAT, GL_FALSE,
 			6 * sizeof(GLfloat), (GLvoid*)(0 * sizeof(GLfloat))
 		);
 		glEnableVertexAttribArray(0);
 
-		// Color attribute:
+		// Define color attribute.
 		glVertexAttribPointer(
 			1, 3, GL_FLOAT, GL_FALSE,
 			6 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat))

@@ -2,6 +2,8 @@
 #include "util.hh"
 #include "window.hh"
 
+/* ~~ Display Geometry ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 // https://www.desmos.com/calculator/6pqhh5uipy
 auto squarePositions(float pieceSize) {
 	struct Coord { float x {}, y {}; };
@@ -16,8 +18,8 @@ auto squarePositions(float pieceSize) {
 		/**/ if (angle == 0) result = {{{1, 1}, {-1, 1}, {-1, -1}, {1, -1}}};
 		else if (angle == 1) result = {{{a, b}, {-b, a}, {-a, -b}, {b, -a}}};
 		else if (angle == 2) result = {{{b, a}, {-a, b}, {-b, -a}, {a, -b}}};
-		for (Coord& c : result) c.x *= radius, c.y *= radius;
-		for (Coord& c : result) c.x += v.x   , c.y += v.y;
+		for (Coord& c: result) c.x *= radius, c.y *= radius;
+		for (Coord& c: result) c.x += v.x   , c.y += v.y;
 		return result;
 	};
 
@@ -76,6 +78,13 @@ auto const colors = std::vector<std::array<float, 3>> {
 	{{0.1, 0.9, 0.2}}, // Green
 };
 
+auto const colorsBackground = std::vector<std::array<float, 3>> {
+	{{0.7, 0.7, 0.7}}, // Unsolved
+	{{0.6, 0.7, 0.6}}, // Solved
+};
+
+/* ~~ Application State ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
 struct AppState {
 	std::vector<std::string_view> args {};
 
@@ -90,14 +99,10 @@ struct AppState {
 using AppWindow = Window<AppState>;
 
 void setup(AppWindow& window, AppState& state) {
-	for (auto arg : state.args) std::print("{}\t", arg);
-	std::print("\n");
-
-	// Puzzle display:
+	// Create our puzzle's geometry.
 	GLuint index = 0;
-	for (auto const& square : squarePositions(0.95)) {
-		for (auto const& coord : square) {
-			// This is very inefficient.
+	for (auto const& square: squarePositions(0.95)) {
+		for (auto const& coord: square) {
 			window.vertices().push_back(coord.x);
 			window.vertices().push_back(coord.y);
 			window.vertices().push_back(0.0);
@@ -114,27 +119,28 @@ void setup(AppWindow& window, AppState& state) {
 		index++;
 	}
 
-	// Record of pressed keys:
+	// Keep track of which keys been pressed.
 	window.bind(glfwSetKeyCallback,
 		[&] (int key, int scancode, int action, int mods) {
-			/**/ if (action == GLFW_PRESS) state.keys[key] = {true, 1};
-			else if (action == GLFW_RELEASE) state.keys[key] = {false, -1};
+			if (action == GLFW_PRESS) state.keys[key] = {true, 1};
+			if (action == GLFW_RELEASE) state.keys[key] = {false, -1};
 		}
 	);
 };
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~ Input Handling ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void processInput(AppWindow& window, AppState& state) {
 	auto turn = [&] (unsigned index, unsigned times=1) {
-		while (times--) state.puzzle.turn(state.puzzle.moves()[index]);
+		auto move = state.puzzle.moves()[index];
+		while (times--) state.puzzle.turn(move);
 	};
 
 	static std::map<int, std::function<void ()>> const keyMap {
-		{GLFW_KEY_ESCAPE,
-			[&] { glfwSetWindowShouldClose(window.handle(), true); }
-		},
+		// Exit.
+		{GLFW_KEY_ESCAPE, [&] { window.close(); state.update = false; } },
 
+		// Turn front upper-left.
 		{GLFW_KEY_E, [&] { turn(4   ); }}, // L'
 		{GLFW_KEY_D, [&] { turn(4, 3); }}, // L
 		{GLFW_KEY_F, [&] { turn(2   ); }}, // U'
@@ -142,6 +148,7 @@ void processInput(AppWindow& window, AppState& state) {
 		{GLFW_KEY_W, [&] { turn(0   ); }}, // F'
 		{GLFW_KEY_R, [&] { turn(0, 3); }}, // F
 
+		// Turn back lower-right.
 		{GLFW_KEY_I, [&] { turn(5, 3); }}, // R
 		{GLFW_KEY_K, [&] { turn(5   ); }}, // R'
 		{GLFW_KEY_L, [&] { turn(3, 3); }}, // D
@@ -150,17 +157,19 @@ void processInput(AppWindow& window, AppState& state) {
 		{GLFW_KEY_O, [&] { turn(1   ); }}, // B'
 	};
 
-	for (auto& [key, keyInfo] : state.keys) {
+	// Apply action based on any detected key presses.
+	for (auto& [key, keyInfo]: state.keys) {
 		if (keyInfo.delta == 1) {
 			state.update = true;
 			auto entry = keyMap.find(key);
 			if (entry != keyMap.end()) entry->second();
 		}
+		// Rest any "pulse" signal after observing.
 		keyInfo.delta = 0;
 	}
 };
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~ Rendering ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 void renderLoop(AppWindow& window, AppState& state) {
 	processInput(window, state);
@@ -168,8 +177,8 @@ void renderLoop(AppWindow& window, AppState& state) {
 		state.update = false;
 		state.solved = state.puzzle.solved();
 
-		// Puzzle display:
-		for (auto sticker : state.puzzle.appearance()) {
+		// Update the puzzle's display.
+		for (auto sticker: state.puzzle.appearance()) {
 			auto color = colors[sticker.color];
 			for (unsigned i=0; i<4; i++) {
 				auto index = 4 * sticker.orientation + i;
@@ -182,19 +191,15 @@ void renderLoop(AppWindow& window, AppState& state) {
 		// Re-send vertex data. I'm pretty sure this is the wrong way of
 		// updating the display of the puzzle. I think the proper solution is
 		// to use the vertex shader to update each sticker's orientation.
-		glBindBuffer(GL_ARRAY_BUFFER, window.VBO());
-		glBufferData(
-			GL_ARRAY_BUFFER,
-			window.vertices().size() * sizeof(GLfloat),
-			window.vertices().data(),
-			GL_STATIC_DRAW
-		);
+		window.updateVertices();
 	}
 
-	if (state.solved) glClearColor(0.6, 0.7, 0.6, 1.0);
-	else glClearColor(0.7, 0.7, 0.7, 1.0);
+	// Clear our window's screen.
+	auto const& bg = colorsBackground[state.solved];
+	glClearColor(bg[0], bg[1], bg[2], 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
+	// Draw our beautiful puzzle.
 	glUseProgram(window.shaderProgram());
 	glBindVertexArray(window.VAO());
 	glDrawElements(
@@ -204,11 +209,12 @@ void renderLoop(AppWindow& window, AppState& state) {
 	);
 	glBindVertexArray(0);
 
+	// Get ready for the next frame.
 	glfwSwapBuffers(window.handle());
 	glfwPollEvents();
 };
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~ Main Function ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 int main(int argc, char const* argv[]) {
 	std::vector<std::string_view> args {argv, argv+argc};
