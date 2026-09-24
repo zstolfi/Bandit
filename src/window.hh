@@ -7,6 +7,8 @@
 // closes, everything closes.
 class Window {
 	GLFWwindow* handle_m {};
+	std::any appState_m {};
+
 	GLuint shaderProgram_m {};
 	GLuint VBO_m {}, VAO_m {}, EBO_m {};
 
@@ -14,11 +16,14 @@ class Window {
 	std::vector<GLuint> indices_m {};
 
 public:
+	template <class AppState=std::monostate>
 	Window(
 		unsigned width, unsigned height, std::string title,
 		std::function<void (Window&)> setup,
-		std::function<void (Window&)> renderLoop
+		std::function<void (Window&)> renderLoop,
+		AppState appState
 	) {
+		appState_m = appState;
 		setupErrorLog();
 		setupWindow(width, height, title);
 		setup(*this);
@@ -37,6 +42,8 @@ public:
 
 	// Getters
 	GLFWwindow* handle() const { return handle_m; }
+	template <class T> T& get() { return std::any_cast<T&>(appState_m); }
+
 	GLuint shaderProgram() const { return shaderProgram_m; };
 	GLuint VBO() const { return VBO_m; };
 	GLuint VAO() const { return VAO_m; };
@@ -66,6 +73,10 @@ private:
 		handle_m = glfwCreateWindow(width, height, title.c_str(), {}, {});
 		if (!handle_m) exit("glfwCreateWindow: Unable to create window.\n");
 		glfwMakeContextCurrent(handle_m);
+
+		// Allow the user of this Window class to access ourselves within a GLFW
+		// callback function.
+		glfwSetWindowUserPointer(handle_m, (void*)this);
 
 		// GLAD is used to make calling GL functions easier.
 		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {

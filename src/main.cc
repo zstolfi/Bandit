@@ -76,15 +76,16 @@ auto const colors = std::vector<std::array<float, 3>> {
 	{{0.1, 0.9, 0.2}}, // Green
 };
 
-int main(int argc, char const* argv[]) {
-	auto puzzle = Cube2x2x2 {};
+struct AppState {
+	using Puzzle = Cube2x2x2;
+	Puzzle puzzle {};
 	bool solved {}, update {true};
 
 	struct KeyInfo { bool state {}; signed delta {}; };
-	static std::map<int, KeyInfo> keys {};
+	std::map<int, KeyInfo> keys {};
+};
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
+int main(int argc, char const* argv[]) {
 	auto setup = [&] (Window& window) {
 		// Puzzle display:
 		GLuint index = 0;
@@ -107,20 +108,33 @@ int main(int argc, char const* argv[]) {
 			index++;
 		}
 
-		// Puzzle controls:
+		// Record of pressed keys:
 		glfwSetKeyCallback(window.handle(),
-			[] (GLFWwindow* w, int key, int scancode, int action, int mods) {
+			[] (GLFWwindow* h, int key, int scancode, int action, int mods) {
+				Window& window = *(Window*)glfwGetWindowUserPointer(h);
+				auto& keys = window.get<AppState>().keys;
 				/**/ if (action == GLFW_PRESS) keys[key] = {true, 1};
 				else if (action == GLFW_RELEASE) keys[key] = {false, -1};
 			}
 		);
+
+		// TODO: Implement this syntax.
+//		window.bind<glfwSetKeyCallback>(
+//			[] (Window& window, int key, int scancode, int action, int mods) {
+//				auto& keys = window.get<AppState>().keys;
+//				/**/ if (action == GLFW_PRESS) keys[key] = {true, 1};
+//				else if (action == GLFW_RELEASE) keys[key] = {false, -1};
+//			}
+//		);
 	};
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 	auto processInput = [&] (Window& window) {
+		auto& state = window.get<AppState>();
+
 		auto turn = [&] (unsigned index, unsigned times=1) {
-			while (times--) puzzle.turn(puzzle.moves()[index]);
+			while (times--) state.puzzle.turn(state.puzzle.moves()[index]);
 		};
 
 		static std::map<int, std::function<void ()>> const keyMap {
@@ -143,9 +157,9 @@ int main(int argc, char const* argv[]) {
 			{GLFW_KEY_O, [&] { turn(1   ); }}, // B'
 		};
 
-		for (auto& [key, keyInfo] : keys) {
+		for (auto& [key, keyInfo] : state.keys) {
 			if (keyInfo.delta == 1) {
-				update = true;
+				state.update = true;
 				auto entry = keyMap.find(key);
 				if (entry != keyMap.end()) entry->second();
 			}
@@ -156,13 +170,14 @@ int main(int argc, char const* argv[]) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 	auto renderLoop = [&] (Window& window) {
+		auto& state = window.get<AppState>();
 		processInput(window);
-		if (update) {
-			update = false;
-			solved = puzzle.solved();
+		if (state.update) {
+			state.update = false;
+			state.solved = state.puzzle.solved();
 
 			// Puzzle display:
-			for (auto sticker : puzzle.appearance()) {
+			for (auto sticker : state.puzzle.appearance()) {
 				auto color = colors[sticker.color];
 				for (unsigned i=0; i<4; i++) {
 					auto index = 4 * sticker.orientation + i;
@@ -184,7 +199,7 @@ int main(int argc, char const* argv[]) {
 			);
 		}
 
-		if (solved) glClearColor(0.6, 0.7, 0.6, 1.0);
+		if (state.solved) glClearColor(0.6, 0.7, 0.6, 1.0);
 		else glClearColor(0.7, 0.7, 0.7, 1.0);
 		glClear(GL_COLOR_BUFFER_BIT);
 
@@ -207,7 +222,8 @@ int main(int argc, char const* argv[]) {
 		800, 800,
 		"Hello, 2x2x2!",
 		setup,
-		renderLoop
+		renderLoop,
+		AppState {}
 	};
 
 	return EXIT_SUCCESS;
