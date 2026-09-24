@@ -38,30 +38,43 @@ class Cube2x2x2 {
 		20, 21, 22, 23,
 	};
 
+	// Moves are to be constructed by the user.
+	struct Move_t {
+		unsigned face {};
+
+		auto appearance() const {
+			struct Plane { std::array<double, 3> origin {}, normal {}; };
+			Plane result {};
+
+			if (face == 0) result = Plane {{{0, 0, 0}}, {{0, -1, 0}}};
+			if (face == 1) result = Plane {{{0, 0, 0}}, {{0, +1, 0}}};
+			if (face == 2) result = Plane {{{0, 0, 0}}, {{0, 0, +1}}};
+			if (face == 3) result = Plane {{{0, 0, 0}}, {{0, 0, -1}}};
+			if (face == 4) result = Plane {{{0, 0, 0}}, {{-1, 0, 0}}};
+			if (face == 5) result = Plane {{{0, 0, 0}}, {{+1, 0, 0}}};
+			return result;
+		}
+	};
+
+	// Sticker data is constructed privately, their getters are public though.
+	class Sticker_t {
+		friend Cube2x2x2;
+		unsigned orientation_m {}, id_m {};
+		Sticker_t() = default;
+		Sticker_t(unsigned orientation, unsigned id)
+		:	orientation_m{orientation}, id_m{id} {}
+
+	public:
+		unsigned orientation() const { return orientation_m; }
+		unsigned face()        const { return orientation_m / 4; }
+		unsigned color()       const { return id_m / 4; }
+	};
+
 	// Every 2x2x2 has unchanging properties. Because we only want to store
 	// essential state in this class, properties_m is a static/global variable.
 	// For run-time generated puzzles singletons can be used instead.
 	struct Properties {
-		// Moves are meant to be constructible by the user. No need for a class
-		// with hidden members ... yet.
-		struct Move {
-			unsigned face {};
-
-			auto appearance() const {
-				struct Plane { std::array<double, 3> origin {}, normal {}; };
-				Plane result {};
-
-				if (face == 0) result = Plane {{{0, 0, 0}}, {{0, -1, 0}}};
-				if (face == 1) result = Plane {{{0, 0, 0}}, {{0, +1, 0}}};
-				if (face == 2) result = Plane {{{0, 0, 0}}, {{0, 0, +1}}};
-				if (face == 3) result = Plane {{{0, 0, 0}}, {{0, 0, -1}}};
-				if (face == 4) result = Plane {{{0, 0, 0}}, {{-1, 0, 0}}};
-				if (face == 5) result = Plane {{{0, 0, 0}}, {{+1, 0, 0}}};
-				return result;
-			}
-		};
-
-		std::array<Move, 6> moves {};
+		std::array<Move_t, 6> moves {};
 		std::array<Permutation, 6> permutations {};
 
 		Properties()
@@ -80,7 +93,8 @@ class Cube2x2x2 {
 	static inline Properties const properties_m {};
 
 public:
-	using Move = Properties::Move;
+	using Move = Move_t;
+	using Sticker = Sticker_t;
 	auto operator<=>(Cube2x2x2 const&) const = default;
 
 	void turn(Move move) {
@@ -90,19 +104,6 @@ public:
 	auto const& moves() const { return properties_m.moves; }
 
 	auto appearance() const {
-		class Sticker {
-			friend Cube2x2x2;
-			unsigned orientation_m {}, id_m {};
-			Sticker() = default;
-			Sticker(unsigned orientation, unsigned id)
-			:	orientation_m{orientation}, id_m{id} {}
-
-		public:
-			unsigned orientation() const { return orientation_m; }
-			unsigned face()        const { return orientation_m / 4; }
-			unsigned color()       const { return id_m / 4; }
-		};
-
 		auto result = std::array<Sticker, 24> {};
 
 		for (unsigned i=0; i<24; i++) {
