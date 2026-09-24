@@ -85,7 +85,9 @@ struct AppState {
 	std::map<int, KeyInfo> keys {};
 };
 
-void setup(Window& window) {
+using AppWindow = Window<AppState>;
+
+void setup(AppWindow& window, AppState& state) {
 	// Puzzle display:
 	GLuint index = 0;
 	for (auto const& square : squarePositions(0.95)) {
@@ -110,8 +112,8 @@ void setup(Window& window) {
 	// Record of pressed keys:
 	glfwSetKeyCallback(window.handle(),
 		[] (GLFWwindow* h, int key, int scancode, int action, int mods) {
-			Window& window = *(Window*)glfwGetWindowUserPointer(h);
-			auto& keys = window.get<AppState>().keys;
+			AppWindow& window = *(AppWindow*)glfwGetWindowUserPointer(h);
+			auto& keys = window.appState().keys;
 			/**/ if (action == GLFW_PRESS) keys[key] = {true, 1};
 			else if (action == GLFW_RELEASE) keys[key] = {false, -1};
 		}
@@ -119,8 +121,8 @@ void setup(Window& window) {
 
 	// TODO: Implement this syntax.
 //		window.bind<glfwSetKeyCallback>(
-//			[] (Window& window, int key, int scancode, int action, int mods) {
-//				auto& keys = window.get<AppState>().keys;
+//			[] (AppWindow& window, int key, int scancode, int action, int mods) {
+//				auto& keys = window.appState().keys;
 //				/**/ if (action == GLFW_PRESS) keys[key] = {true, 1};
 //				else if (action == GLFW_RELEASE) keys[key] = {false, -1};
 //			}
@@ -129,9 +131,7 @@ void setup(Window& window) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void processInput(Window& window) {
-	auto& state = window.get<AppState>();
-
+void processInput(AppWindow& window, AppState& state) {
 	auto turn = [&] (unsigned index, unsigned times=1) {
 		while (times--) state.puzzle.turn(state.puzzle.moves()[index]);
 	};
@@ -168,9 +168,8 @@ void processInput(Window& window) {
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-void renderLoop(Window& window) {
-	auto& state = window.get<AppState>();
-	processInput(window);
+void renderLoop(AppWindow& window, AppState& state) {
+	processInput(window, state);
 	if (state.update) {
 		state.update = false;
 		state.solved = state.puzzle.solved();
@@ -218,7 +217,7 @@ void renderLoop(Window& window) {
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 int main(int argc, char const* argv[]) {
-	Window {
+	AppWindow {
 		800, 800,
 		"Hello, 2x2x2!",
 		setup,

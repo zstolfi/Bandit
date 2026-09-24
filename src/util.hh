@@ -1,6 +1,5 @@
 #pragma once
 #include <algorithm>
-#include <any>
 #include <array>
 #include <concepts>
 #include <filesystem>

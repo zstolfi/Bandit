@@ -5,9 +5,10 @@
 
 // Programs right now can only have one monolithic window. When this window
 // closes, everything closes.
+template <class AppState=std::monostate>
 class Window {
 	GLFWwindow* handle_m {};
-	std::any appState_m {};
+	AppState appState_m {};
 
 	GLuint shaderProgram_m {};
 	GLuint VBO_m {}, VAO_m {}, EBO_m {};
@@ -16,20 +17,19 @@ class Window {
 	std::vector<GLuint> indices_m {};
 
 public:
-	template <class AppState=std::monostate>
 	Window(
 		unsigned width, unsigned height, std::string title,
-		std::function<void (Window&)> setup,
-		std::function<void (Window&)> renderLoop,
-		AppState appState
+		void (* setup     ) (Window<AppState>&, AppState&),
+		void (* renderLoop) (Window<AppState>&, AppState&),
+		AppState appState={}
 	) {
 		appState_m = appState;
 		setupErrorLog();
 		setupWindow(width, height, title);
-		setup(*this);
+		setup(*this, appState_m);
 		setupObjects();
 		while (!glfwWindowShouldClose(handle_m)) {
-			renderLoop(*this);
+			renderLoop(*this, appState_m);
 		}
 	}
 
@@ -42,7 +42,7 @@ public:
 
 	// Getters
 	GLFWwindow* handle() const { return handle_m; }
-	template <class T> T& get() { return std::any_cast<T&>(appState_m); }
+	AppState& appState() { return appState_m; }
 
 	GLuint shaderProgram() const { return shaderProgram_m; };
 	GLuint VBO() const { return VBO_m; };
