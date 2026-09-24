@@ -179,9 +179,9 @@ void renderLoop(AppWindow& window, AppState& state) {
 
 		// Update the puzzle's display.
 		for (auto sticker: state.puzzle.appearance()) {
-			auto color = colors[sticker.color];
+			auto color = colors[sticker.color()];
 			for (unsigned i=0; i<4; i++) {
-				auto index = 4 * sticker.orientation + i;
+				auto index = 4 * sticker.orientation() + i;
 				window.vertices()[6 * index + 3] = color[0];
 				window.vertices()[6 * index + 4] = color[1];
 				window.vertices()[6 * index + 5] = color[2];
