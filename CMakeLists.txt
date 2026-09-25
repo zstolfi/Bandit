@@ -86,6 +86,10 @@ target_link_libraries(test-${PROJECT_NAME} PRIVATE
 	GTest::gtest_main
 )
 
+target_include_directories(test-${PROJECT_NAME} PRIVATE
+	${SOURCE_DIR}
+)
+
 set_target_properties(test-${PROJECT_NAME} PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 )
