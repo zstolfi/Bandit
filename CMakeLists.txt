@@ -33,15 +33,11 @@ option(GLFW_INSTALL OFF)
 find_package(glfw3 REQUIRED)
 
 # GLAD
-add_library(
-	glad
-	STATIC
+add_library(glad STATIC
 	${INCLUDE_DIR}/glad/src/glad.c
 )
 
-target_include_directories(
-	glad
-	PUBLIC
+target_include_directories(glad PUBLIC
 	${INCLUDE_DIR}/glad/include
 )
 
@@ -52,9 +48,7 @@ add_subdirectory(${INCLUDE_DIR}/googletest)
 
 add_executable(${PROJECT_NAME})
 
-target_sources(
-	${PROJECT_NAME}
-	PRIVATE
+target_sources(${PROJECT_NAME} PRIVATE
 	${SOURCE_DIR}/main.cc
 	${SOURCE_DIR}/vertex.glsl
 	${SOURCE_DIR}/fragment.glsl
@@ -63,23 +57,17 @@ target_sources(
 file(GLOB SHADERS "${SOURCE_DIR}/*.glsl")
 file(COPY ${SHADERS} DESTINATION ${OUTPUT_DIR})
 
-target_link_libraries(
-	${PROJECT_NAME}
-	PRIVATE
+target_link_libraries(${PROJECT_NAME} PRIVATE
 	glfw
 	glad
 	${CMAKE_DL_LIBS} # Required for GLAD.
 )
 
-set_target_properties(
-	${PROJECT_NAME}
-	PROPERTIES
+set_target_properties(${PROJECT_NAME} PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 )
 
-target_compile_options(
-	${PROJECT_NAME}
-	PRIVATE
+target_compile_options(${PROJECT_NAME} PRIVATE
 	-Wall
 	-fconcepts-diagnostics-depth=8
 	-g
@@ -90,21 +78,15 @@ target_compile_options(
 enable_testing()
 add_executable(test-${PROJECT_NAME})
 
-target_sources(
-	test-${PROJECT_NAME}
-	PRIVATE
+target_sources(test-${PROJECT_NAME} PRIVATE
 	${TEST_DIR}/gtest.cc
 )
 
-target_link_libraries(
-	test-${PROJECT_NAME}
-	PRIVATE
+target_link_libraries(test-${PROJECT_NAME} PRIVATE
 	GTest::gtest_main
 )
 
-set_target_properties(
-	test-${PROJECT_NAME}
-	PROPERTIES
+set_target_properties(test-${PROJECT_NAME} PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 )
 
