@@ -36,7 +36,7 @@ public:
 	}
 
 protected:
-	virtual Coord3& normalize() { /* Do nothing. */ return *this; }
+	virtual void normalize() {/* Do nothing. */}
 };
 
 class Norm3: public Coord3 {
@@ -44,21 +44,23 @@ public:
 	Norm3(): Coord3{1, 0, 0} {}
 	Norm3(Coord3 c): Coord3{c} { normalize(); }
 	Norm3(double x, double y, double z): Coord3{x, y, z} { normalize(); }
+	auto operator<=>(Norm3 const&) const = default;
 
 private:
-	Coord3& normalize() override {
+	void normalize() override {
 		bool strict = std::is_constant_evaluated();
 		if (length2() != 0.0) {
 			double inv = std::pow(length2(), -0.5);
 			data_m[0] *= inv;
 			data_m[1] *= inv;
 			data_m[2] *= inv;
-			return *this;
 		}
-		// Defining an invalid normal at compile time is definitely an error.
-		if (strict) throw std::domain_error {"Norm3 division by 0"};
-		// Otherwise it's best to just keep our state valid.
-		return *this = {};
+		else {
+			// Defining invalid normals at compile time is definitely an error.
+			if (strict) throw std::domain_error {"Norm3 division by 0"};
+			// Otherwise it's best to just keep our state valid.
+			else *this = {};
+		}
 	}
 };
 
@@ -67,6 +69,13 @@ class Ray3 {
 	Norm3 direction_m {};
 
 public:
+	Ray3() {}
+	Ray3(Coord3 origin, Norm3 direction)
+	:	origin_m{origin}
+	,	direction_m{direction} {}
+
+	auto operator<=>(Ray3 const&) const = default;
+
 	// Getters
 	Coord3 const& origin() const { return origin_m; }
 	Norm3 const& direction() const { return direction_m; }
@@ -81,6 +90,16 @@ class Plane3 {
 	Norm3 direction_m {};
 
 public:
+	Plane3() {}
+	Plane3(Coord3 origin, Norm3 direction)
+	:	origin_m{origin}
+	,	direction_m{direction} {}
+	Plane3(Ray3 const& r)
+	:	origin_m{r.origin()}
+	,	direction_m{r.direction()} {}
+
+	auto operator<=>(Plane3 const&) const = default;
+
 	// Getters
 	Coord3 const& origin() const { return origin_m; }
 	Norm3 const& direction() const { return direction_m; }
@@ -89,23 +108,23 @@ public:
 	void origin(Coord3 c) { origin_m = c; normalize(); }
 	void direction(Norm3 n) { direction_m = n; }
 
-	// Properties
-	double length()
+//	// Properties
+//	double length();
 
 private:
-	normalize() {
+	void normalize() {
 		double dist =
-			origin_m[0] * direction_m[0] +
-			origin_m[1] * direction_m[1] +
-			origin_m[2] * direction_m[2]
+			origin_m.x() * direction_m.x() +
+			origin_m.y() * direction_m.y() +
+			origin_m.z() * direction_m.z()
 		;
-		origin_m = {
-			direction_m[0] * dist,
-			direction_m[1] * dist,
-			direction_m[2] * dist,
+		origin_m = Coord3 {
+			direction_m.x() * dist,
+			direction_m.y() * dist,
+			direction_m.z() * dist,
 		};
 	}
-}
+};
 
 /* ~~ Group Theory ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 // for puzzle logic

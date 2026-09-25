@@ -181,7 +181,7 @@ void renderLoop(AppWindow& window, AppState& state) {
 		for (auto sticker: state.puzzle.appearance()) {
 			auto color = colors[sticker.color()];
 			for (unsigned i=0; i<4; i++) {
-				auto index = 4 * sticker.orientation() + i;
+				auto index = 4 * sticker.position() + i;
 				window.vertices()[6 * index + 3] = color[0];
 				window.vertices()[6 * index + 4] = color[1];
 				window.vertices()[6 * index + 5] = color[2];
@@ -190,7 +190,7 @@ void renderLoop(AppWindow& window, AppState& state) {
 
 		// Re-send vertex data. I'm pretty sure this is the wrong way of
 		// updating the display of the puzzle. I think the proper solution is
-		// to use the vertex shader to update each sticker's orientation.
+		// to use the vertex shader to update each sticker's position.
 		window.updateVertices();
 	}
 

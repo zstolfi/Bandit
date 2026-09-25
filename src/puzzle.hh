@@ -73,7 +73,7 @@ class Cube2x2x2 {
 		auto polygon() const {
 			auto result = std::array<Coord3, 4> {};
 			// https://www.desmos.com/calculator/6pqhh5uipy
-			result = std::array<std::array<Coord3, 4>> {{
+			result = std::array<std::array<Coord3, 4>, 24> {{
 				{{{-1,  0,  0}, {-1,  0, +1}, {-1, +1, +1}, {-1, +1,  0}}},
 				{{{-1,  0,  0}, {-1, +1,  0}, {-1, +1, -1}, {-1,  0, -1}}},
 				{{{-1,  0,  0}, {-1, -1,  0}, {-1, -1, +1}, {-1,  0, +1}}},
