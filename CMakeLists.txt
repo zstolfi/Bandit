@@ -9,10 +9,15 @@ project(
 	LANGUAGES CXX C
 )
 
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # ~~ Directories ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 set(INCLUDE_DIR ".include")
 set(SOURCE_DIR "src")
+set(TEST_DIR "test")
 
 # ~~ Dependencies ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
@@ -39,7 +44,10 @@ target_include_directories(
 	${INCLUDE_DIR}/glad/include
 )
 
-# ~~ Project ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# GoogleTest
+add_subdirectory(${INCLUDE_DIR}/googletest)
+
+# ~~ Main Executable ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 add_executable(${PROJECT_NAME})
 
@@ -66,9 +74,6 @@ set_target_properties(
 	${PROJECT_NAME}
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME}
-	CXX_STANDARD 23
-	CXX_STANDARD_REQUIRED ON
-	CXX_EXTENSIONS OFF
 )
 
 target_compile_options(
@@ -78,3 +83,29 @@ target_compile_options(
 	-fconcepts-diagnostics-depth=8
 	-g
 )
+
+# ~~ Testing Executable ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+enable_testing()
+add_executable(test-${PROJECT_NAME})
+
+target_sources(
+	test-${PROJECT_NAME}
+	PRIVATE
+	${TEST_DIR}/gtest.cc
+)
+
+target_link_libraries(
+	test-${PROJECT_NAME}
+	PRIVATE
+	GTest::gtest_main
+)
+
+set_target_properties(
+	test-${PROJECT_NAME}
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME}
+)
+
+include(GoogleTest)
+gtest_discover_tests(test-${PROJECT_NAME})
