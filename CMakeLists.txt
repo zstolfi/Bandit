@@ -18,6 +18,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(INCLUDE_DIR ".include")
 set(SOURCE_DIR "src")
 set(TEST_DIR "test")
+set(OUTPUT_DIR ${CMAKE_BINARY_DIR}/output)
 
 # ~~ Dependencies ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
@@ -60,7 +61,7 @@ target_sources(
 )
 
 file(GLOB SHADERS "${SOURCE_DIR}/*.glsl")
-file(COPY ${SHADERS} DESTINATION ${CMAKE_BINARY_DIR}/${PROJECT_NAME})
+file(COPY ${SHADERS} DESTINATION ${OUTPUT_DIR})
 
 target_link_libraries(
 	${PROJECT_NAME}
@@ -73,7 +74,7 @@ target_link_libraries(
 set_target_properties(
 	${PROJECT_NAME}
 	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME}
+	RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 )
 
 target_compile_options(
@@ -104,7 +105,7 @@ target_link_libraries(
 set_target_properties(
 	test-${PROJECT_NAME}
 	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${PROJECT_NAME}
+	RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR}
 )
 
 include(GoogleTest)
