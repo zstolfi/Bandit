@@ -70,10 +70,10 @@ auto squarePositions(float pieceSize) {
 }
 
 auto const colors = std::vector<std::array<float, 3>> {
+	{{0.9, 0.5, 0.2}}, // Orange
+	{{0.9, 0.2, 0.2}}, // Red
 	{{0.9, 0.9, 0.9}}, // White
 	{{0.9, 0.9, 0.2}}, // Yellow
-	{{0.9, 0.2, 0.2}}, // Red
-	{{0.9, 0.5, 0.2}}, // Orange
 	{{0.2, 0.3, 0.9}}, // Blue
 	{{0.1, 0.9, 0.2}}, // Green
 };

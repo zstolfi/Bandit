@@ -27,8 +27,8 @@ concept IsPuzzle = std::regular<T> && requires(
 // 2x2x2 Rubik's Cube
 // https://www.desmos.com/calculator/6pqhh5uipy
 class Cube2x2x2 {
-	// Index denotes orientation, value determines sticker color.
-	// So if state[20] == 2, orientation #20 is occupied by sticker #2.
+	// Index denotes position, value determines sticker.
+	// So if state[20] == 10, position #20 is occupied by sticker #10.
 	std::array<unsigned, 24> state_m {
 		 0,  1,  2,  3,
 		 4,  5,  6,  7,
@@ -43,15 +43,15 @@ class Cube2x2x2 {
 		unsigned face {};
 
 		auto appearance() const {
-			struct Plane { std::array<double, 3> origin {}, normal {}; };
-			Plane result {};
-
-			if (face == 0) result = Plane {{{0, 0, 0}}, {{0, -1, 0}}};
-			if (face == 1) result = Plane {{{0, 0, 0}}, {{0, +1, 0}}};
-			if (face == 2) result = Plane {{{0, 0, 0}}, {{0, 0, +1}}};
-			if (face == 3) result = Plane {{{0, 0, 0}}, {{0, 0, -1}}};
-			if (face == 4) result = Plane {{{0, 0, 0}}, {{-1, 0, 0}}};
-			if (face == 5) result = Plane {{{0, 0, 0}}, {{+1, 0, 0}}};
+			Plane3 result {};
+			result = std::array<Plane3, 6> {{
+				{{0, 0, 0}, {-1, 0, 0}},
+				{{0, 0, 0}, {+1, 0, 0}},
+				{{0, 0, 0}, {0, 0, -1}},
+				{{0, 0, 0}, {0, 0, +1}},
+				{{0, 0, 0}, {0, -1, 0}},
+				{{0, 0, 0}, {0, +1, 0}},
+			}} [face];
 			return result;
 		}
 	};
@@ -59,15 +59,53 @@ class Cube2x2x2 {
 	// Sticker data is constructed privately, their getters are public though.
 	class Sticker_t {
 		friend Cube2x2x2;
-		unsigned orientation_m {}, id_m {};
+		unsigned position_m {}, id_m {};
 		Sticker_t() = default;
-		Sticker_t(unsigned orientation, unsigned id)
-		:	orientation_m{orientation}, id_m{id} {}
+		Sticker_t(unsigned position, unsigned id)
+		:	position_m{position}, id_m{id} {}
 
 	public:
-		unsigned orientation() const { return orientation_m; }
-		unsigned face()        const { return orientation_m / 4; }
-		unsigned color()       const { return id_m / 4; }
+		unsigned position() const { return position_m; }
+		unsigned face()     const { return position_m / 4; }
+		unsigned id()       const { return id_m; }
+		unsigned color()    const { return id_m / 4; }
+
+		auto polygon() const {
+			auto result = std::array<Coord3, 4> {};
+			// https://www.desmos.com/calculator/6pqhh5uipy
+			result = std::array<std::array<Coord3, 4>> {{
+				{{{-1,  0,  0}, {-1,  0, +1}, {-1, +1, +1}, {-1, +1,  0}}},
+				{{{-1,  0,  0}, {-1, +1,  0}, {-1, +1, -1}, {-1,  0, -1}}},
+				{{{-1,  0,  0}, {-1, -1,  0}, {-1, -1, +1}, {-1,  0, +1}}},
+				{{{-1,  0,  0}, {-1,  0, -1}, {-1, -1, -1}, {-1, -1,  0}}},
+
+				{{{+1,  0,  0}, {+1,  0, +1}, {+1, -1, +1}, {+1, -1,  0}}},
+				{{{+1,  0,  0}, {+1, -1,  0}, {+1, -1, -1}, {+1,  0, -1}}},
+				{{{+1,  0,  0}, {+1, +1,  0}, {+1, +1, +1}, {+1,  0, +1}}},
+				{{{+1,  0,  0}, {+1,  0, -1}, {+1, +1, -1}, {+1, +1,  0}}},
+
+				{{{ 0,  0, +1}, { 0, +1, +1}, {-1, +1, +1}, {-1,  0, +1}}},
+				{{{ 0,  0, +1}, {-1,  0, +1}, {-1, -1, +1}, { 0, -1, +1}}},
+				{{{ 0,  0, +1}, { 0, -1, +1}, {+1, -1, +1}, {+1,  0, +1}}},
+				{{{ 0,  0, +1}, {+1,  0, +1}, {+1, +1, +1}, { 0, +1, +1}}},
+
+				{{{ 0,  0, -1}, {-1,  0, -1}, {-1, +1, -1}, { 0, +1, -1}}},
+				{{{ 0,  0, -1}, { 0, -1, -1}, {-1, -1, -1}, {-1,  0, -1}}},
+				{{{ 0,  0, -1}, {+1,  0, -1}, {+1, -1, -1}, { 0, -1, -1}}},
+				{{{ 0,  0, -1}, { 0, +1, -1}, {+1, +1, -1}, {+1,  0, -1}}},
+
+				{{{ 0, +1,  0}, {-1, +1,  0}, {-1, +1, +1}, { 0, +1, +1}}},
+				{{{ 0, +1,  0}, { 0, +1, -1}, {-1, +1, -1}, {-1, +1,  0}}},
+				{{{ 0, +1,  0}, { 0, +1, +1}, {+1, +1, +1}, {+1, +1,  0}}},
+				{{{ 0, +1,  0}, {+1, +1,  0}, {+1, +1, -1}, { 0, +1, -1}}},
+
+				{{{ 0, -1,  0}, { 0, -1, +1}, {-1, -1, +1}, {-1, -1,  0}}},
+				{{{ 0, -1,  0}, {-1, -1,  0}, {-1, -1, -1}, { 0, -1, -1}}},
+				{{{ 0, -1,  0}, {+1, -1,  0}, {+1, -1, +1}, { 0, -1, +1}}},
+				{{{ 0, -1,  0}, { 0, -1, -1}, {+1, -1, -1}, {+1, -1,  0}}},
+			}} [position_m];
+			return result;
+		};
 	};
 
 	// Every 2x2x2 has unchanging properties. Because we only want to store
@@ -105,11 +143,9 @@ public:
 
 	auto appearance() const {
 		auto result = std::array<Sticker, 24> {};
-
 		for (unsigned i=0; i<24; i++) {
 			result[i] = Sticker {i, state_m[i]};
 		}
-
 		return result;
 	}
 
