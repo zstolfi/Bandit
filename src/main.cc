@@ -2,74 +2,7 @@
 #include "util.hh"
 #include "window.hh"
 
-/* ~~ Display Geometry ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-// https://www.desmos.com/calculator/6pqhh5uipy
-auto squarePositions(float pieceSize) {
-	struct Coord { float x {}, y {}; };
-	auto result = std::vector<std::array<Coord, 4>> {};
-
-	float const radius = 0.1 * pieceSize;
-	float const s = 0.5, c = 0.5 * std::sqrt(3);
-	float const a = s+c, b = s-c;
-
-	auto square = [&] (Coord v, int angle) {
-		auto result = std::array<Coord, 4> {};
-		/**/ if (angle == 0) result = {{{1, 1}, {-1, 1}, {-1, -1}, {1, -1}}};
-		else if (angle == 1) result = {{{a, b}, {-b, a}, {-a, -b}, {b, -a}}};
-		else if (angle == 2) result = {{{b, a}, {-a, b}, {-b, -a}, {a, -b}}};
-		for (Coord& c: result) c.x *= radius, c.y *= radius;
-		for (Coord& c: result) c.x += v.x   , c.y += v.y;
-		return result;
-	};
-
-	auto corners = std::array<Coord, 8> {{
-		{ -0.7,  0.2 },
-		{ -0.7, -0.2 },
-		{ -0.3,  0.2 },
-		{ -0.3, -0.2 },
-		{  0.3,  0.2 },
-		{  0.3, -0.2 },
-		{  0.7,  0.2 },
-		{  0.7, -0.2 },
-	}};
-
-	result = {
-		square({corners[0].x + (   1)*radius, corners[0].y + (  -1)*radius}, 0),
-		square({corners[1].x + (   1)*radius, corners[1].y + (   1)*radius}, 0),
-		square({corners[2].x + (  -1)*radius, corners[2].y + (  -1)*radius}, 0),
-		square({corners[3].x + (  -1)*radius, corners[3].y + (   1)*radius}, 0),
-
-		square({corners[4].x + (   1)*radius, corners[4].y + (  -1)*radius}, 0),
-		square({corners[5].x + (   1)*radius, corners[5].y + (   1)*radius}, 0),
-		square({corners[6].x + (  -1)*radius, corners[6].y + (  -1)*radius}, 0),
-		square({corners[7].x + (  -1)*radius, corners[7].y + (   1)*radius}, 0),
-
-		square({corners[0].x + ( c-s)*radius, corners[0].y + ( c+s)*radius}, 1),
-		square({corners[2].x + (-c+s)*radius, corners[2].y + ( c+s)*radius}, 2),
-		square({corners[4].x + ( c-s)*radius, corners[4].y + ( c+s)*radius}, 1),
-		square({corners[6].x + (-c+s)*radius, corners[6].y + ( c+s)*radius}, 2),
-
-		square({corners[1].x + ( c-s)*radius, corners[1].y + (-c-s)*radius}, 2),
-		square({corners[3].x + (-c+s)*radius, corners[3].y + (-c-s)*radius}, 1),
-		square({corners[5].x + ( c-s)*radius, corners[5].y + (-c-s)*radius}, 2),
-		square({corners[7].x + (-c+s)*radius, corners[7].y + (-c-s)*radius}, 1),
-
-		square({corners[0].x + (-c-s)*radius, corners[0].y + (-c+s)*radius}, 2),
-		square({corners[1].x + (-c-s)*radius, corners[1].y + ( c-s)*radius}, 1),
-		square({corners[6].x + ( c+s)*radius, corners[6].y + (-c+s)*radius}, 1),
-		square({corners[7].x + ( c+s)*radius, corners[7].y + ( c-s)*radius}, 2),
-
-		square({corners[2].x + ( c+s)*radius, corners[2].y + (-c+s)*radius}, 1),
-		square({corners[3].x + ( c+s)*radius, corners[3].y + ( c-s)*radius}, 2),
-		square({corners[4].x + (-c-s)*radius, corners[4].y + (-c+s)*radius}, 2),
-		square({corners[5].x + (-c-s)*radius, corners[5].y + ( c-s)*radius}, 1),
-	};
-
-	return result;
-}
-
-auto const colors = std::vector<std::array<float, 3>> {
+auto const Colors = std::vector<std::array<float, 3>> {
 	{{0.9, 0.5, 0.2}}, // Orange
 	{{0.9, 0.2, 0.2}}, // Red
 	{{0.9, 0.9, 0.9}}, // White
@@ -78,7 +11,7 @@ auto const colors = std::vector<std::array<float, 3>> {
 	{{0.1, 0.9, 0.2}}, // Green
 };
 
-auto const colorsBackground = std::vector<std::array<float, 3>> {
+auto const ColorsBackground = std::vector<std::array<float, 3>> {
 	{{0.7, 0.7, 0.7}}, // Unsolved
 	{{0.6, 0.7, 0.6}}, // Solved
 };
@@ -87,6 +20,9 @@ auto const colorsBackground = std::vector<std::array<float, 3>> {
 
 struct AppState {
 	std::vector<std::string_view> args {};
+	std::vector<GLfloat> vertices {};
+	std::vector<GLuint> indices {};
+	std::map<unsigned, std::vector<unsigned>> stickerIndices {};
 
 	using Puzzle = Cube2x2x2;
 	Puzzle puzzle {};
@@ -101,23 +37,30 @@ using AppWindow = Window<AppState>;
 void setup(AppWindow& window, AppState& state) {
 	// Create our puzzle's geometry.
 	GLuint index = 0;
-	for (auto const& square: squarePositions(0.95)) {
-		for (auto const& coord: square) {
-			window.vertices().push_back(coord.x);
-			window.vertices().push_back(coord.y);
-			window.vertices().push_back(0.0);
-			window.vertices().push_back(colors[index / 4][0]);
-			window.vertices().push_back(colors[index / 4][1]);
-			window.vertices().push_back(colors[index / 4][2]);
+	for (auto sticker: state.puzzle.appearance()) {
+		auto const& polygon = sticker.polygon();
+		auto const& color = Colors[sticker.color()];
+		bool show = sticker.color() == 0;
+		for (Coord3 const& c: polygon) {
+			state.stickerIndices[sticker.position()].push_back(index);
+			state.vertices.push_back(show? -c.y(): 0.0);
+			state.vertices.push_back(show?  c.z(): 0.0);
+			state.vertices.push_back(/*show? c.z():*/ 0.0);
+			state.vertices.push_back(color[0]);
+			state.vertices.push_back(color[1]);
+			state.vertices.push_back(color[2]);
+			index++;
 		}
-		window.indices().push_back(4 * index + 0);
-		window.indices().push_back(4 * index + 1);
-		window.indices().push_back(4 * index + 2);
-		window.indices().push_back(4 * index + 2);
-		window.indices().push_back(4 * index + 3);
-		window.indices().push_back(4 * index + 0);
-		index++;
+		state.indices.push_back(index-4 + 0);
+		state.indices.push_back(index-4 + 1);
+		state.indices.push_back(index-4 + 2);
+		state.indices.push_back(index-4 + 2);
+		state.indices.push_back(index-4 + 3);
+		state.indices.push_back(index-4 + 0);
 	}
+
+	window.vertices(state.vertices);
+	window.indices(state.indices);
 
 	// Keep track of which keys been pressed.
 	window.bind(glfwSetKeyCallback,
@@ -179,34 +122,30 @@ void renderLoop(AppWindow& window, AppState& state) {
 
 		// Update the puzzle's display.
 		for (auto sticker: state.puzzle.appearance()) {
-			auto color = colors[sticker.color()];
-			for (unsigned i=0; i<4; i++) {
-				auto index = 4 * sticker.position() + i;
-				window.vertices()[6 * index + 3] = color[0];
-				window.vertices()[6 * index + 4] = color[1];
-				window.vertices()[6 * index + 5] = color[2];
+			auto color = Colors[sticker.color()];
+			auto position = sticker.position();
+			for (unsigned index: state.stickerIndices[position]) {
+				state.vertices[6 * index + 3] = color[0];
+				state.vertices[6 * index + 4] = color[1];
+				state.vertices[6 * index + 5] = color[2];
 			}
 		}
 
 		// Re-send vertex data. I'm pretty sure this is the wrong way of
 		// updating the display of the puzzle. I think the proper solution is
 		// to use the vertex shader to update each sticker's position.
-		window.updateVertices();
+		window.vertices(state.vertices);
 	}
 
 	// Clear our window's screen.
-	auto const& bg = colorsBackground[state.solved];
+	auto const& bg = ColorsBackground[state.solved];
 	glClearColor(bg[0], bg[1], bg[2], 1.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	// Draw our beautiful puzzle.
 	glUseProgram(window.shaderProgram());
 	glBindVertexArray(window.VAO());
-	glDrawElements(
-		GL_TRIANGLES,
-		window.indices().size(),
-		GL_UNSIGNED_INT, {}
-	);
+	glDrawElements(GL_TRIANGLES, state.indices.size(), GL_UNSIGNED_INT, {});
 	glBindVertexArray(0);
 
 	// Get ready for the next frame.

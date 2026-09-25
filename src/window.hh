@@ -13,9 +13,6 @@ class Window {
 	GLuint shaderProgram_m {};
 	GLuint VBO_m {}, VAO_m {}, EBO_m {};
 
-	std::vector<GLfloat> vertices_m {};
-	std::vector<GLuint> indices_m {};
-
 public:
 	Window(
 		unsigned width, unsigned height, std::string title,
@@ -26,8 +23,8 @@ public:
 		appState_m = appState;
 		setupErrorLog();
 		setupWindow(width, height, title);
-		setup(*this, appState_m);
 		setupObjects();
+		setup(*this, appState_m);
 		while (!glfwWindowShouldClose(handle_m)) {
 			renderLoop(*this, appState_m);
 		}
@@ -55,8 +52,22 @@ public:
 	GLuint VAO() const { return VAO_m; };
 	GLuint EBO() const { return EBO_m; };
 
-	std::vector<GLfloat>& vertices() { return vertices_m; }
-	std::vector<GLuint>& indices() { return indices_m; }
+	// Setters
+	void vertices(std::vector<GLfloat>& vs) {
+		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
+		glBufferData(GL_ARRAY_BUFFER,
+			vs.size() * sizeof(GLfloat),
+			vs.data(), GL_STATIC_DRAW
+		);
+	}
+
+	void indices(std::vector<GLuint>& is) {
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_m);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+			is.size() * sizeof(GLuint),
+			is.data(), GL_STATIC_DRAW
+		);
+	}
 
 	// GLFW specific
 	template <class ... Args> using CallbackFn = void (GLFWwindow*, Args ... );
@@ -72,24 +83,6 @@ public:
 			[] (GLFWwindow*, Args ... args) {
 				uf(args ... );
 			}
-		);
-	}
-
-	void updateVertices() {
-		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
-		glBufferData(
-			GL_ARRAY_BUFFER,
-			vertices_m.size() * sizeof(GLfloat), vertices_m.data(),
-			GL_STATIC_DRAW
-		);
-	}
-
-	void updateIndices() {
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_m);
-		glBufferData(
-			GL_ELEMENT_ARRAY_BUFFER,
-			indices_m.size() * sizeof(GLuint), indices_m.data(),
-			GL_STATIC_DRAW
 		);
 	}
 
@@ -203,8 +196,8 @@ private:
 		glGenBuffers(1, &EBO_m);
 
 		glBindVertexArray(VAO_m);
-		updateVertices();
-		updateIndices();
+		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_m);
 
 		// Define position attribute.
 		glVertexAttribPointer(
