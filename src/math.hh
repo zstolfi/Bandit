@@ -186,6 +186,10 @@ public:
 		return cycles_m.back()[0] + 1;
 	}
 
+	auto cycles() const {
+		return cycles_m;
+	}
+
 	auto word() const {
 		auto result = std::vector<Index> {};
 		return result = apply(stdv::iota(0uz, size()));
@@ -214,3 +218,30 @@ private:
 		);
 	}
 };
+
+/* ~~ Formatting & Printing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+template <>
+struct std::formatter<Permutation>: std::formatter<std::string> {
+	auto format(Permutation p, format_context& ctx) const {
+		std::string result {};
+		auto cycles = p.cycles();
+		if (!cycles.empty()) {
+			for (auto const& cycle: cycles) {
+				result += "(";
+				for (bool first=true; auto i: cycle) {
+					if (!first) result += ", ";
+					result += std::format("{}", i);
+					first = false;
+				}
+				result += ")";
+			}
+		}
+		else result = "()";
+		return stdr::copy(result, ctx.out()).out;
+	}
+};
+
+std::ostream& operator<<(std::ostream& os, Permutation const& p) {
+	return os << std::format("{}", p);
+}
