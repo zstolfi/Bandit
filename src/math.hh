@@ -160,10 +160,11 @@ public:
 		normalize();
 	}
 
+	// TODO: Add multiplication operator overloads.
+
 	template <stdr::random_access_range Range>
 	auto apply(Range const& input) const {
-		auto result = std::vector<Index> {};
-		stdr::copy(input, std::back_inserter(result));
+		auto result = input;
 		apply_inplace(result);
 		return result;
 	}
@@ -186,13 +187,26 @@ public:
 		return cycles_m.back()[0] + 1;
 	}
 
+	auto inverse() const {
+		auto result = *this;
+		// Inverting is easy. Simply reverse the cycles and voila.
+		// Here I keep the first elements in-place to preserve normalization.
+		for (auto& cycle: result.cycles_m) {
+			stdr::reverse(cycle.begin()+1, cycle.end());
+		}
+		return result;
+	};
+
 	auto cycles() const {
 		return cycles_m;
 	}
 
 	auto word() const {
 		auto result = std::vector<Index> {};
-		return result = apply(stdv::iota(0uz, size()));
+		result.resize(size());
+		stdr::iota(result, 0);
+		apply_inplace(result);
+		return result;
 	}
 
 private:
