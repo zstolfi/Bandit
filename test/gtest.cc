@@ -9,29 +9,30 @@
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 TEST(BanditPermutation, MemberTypes) {
-	EXPECT_CONCEPT(std::integral, Permutation::Index);
-	EXPECT_CONCEPT(stdr::range, Permutation::Cycle);
-	EXPECT_CONCEPT(std::integral, stdr::range_value_t<Permutation::Cycle>);
+	using P = Permutation;
+	EXPECT_CONCEPT(std::integral, P::Index);
+	EXPECT_CONCEPT(stdr::range, P::Cycle);
+	EXPECT_CONCEPT(std::same_as, P::Index, stdr::range_value_t<P::Cycle>);
 }
 
 TEST(BanditPermutation, EmptyConstruction) {
 	Permutation p;
 	EXPECT_EQ(p, Permutation ());
 	EXPECT_EQ(p, Permutation {});
-	EXPECT_EQ(p, Permutation ({}));
-	EXPECT_EQ(p, Permutation {{}});
+	EXPECT_EQ(p, Permutation (Permutation::Cycle ()));
 	EXPECT_EQ(p, Permutation (Permutation::Cycle {}));
 
 	// Cycles of 0 or 1 elements do nothing.
-	EXPECT_EQ(p, Permutation ({}));
-	EXPECT_EQ(p, Permutation ({}, {}));
-	EXPECT_EQ(p, Permutation ({}, {}, {}));
-	EXPECT_EQ(p, Permutation ({0}));
-	EXPECT_EQ(p, Permutation ({0}, {}));
-	EXPECT_EQ(p, Permutation ({}, {0}));
-	EXPECT_EQ(p, Permutation ({0}, {}, {1}));
-	EXPECT_EQ(p, Permutation ({1}, {2}, {3}));
-	EXPECT_EQ(p, Permutation ({10000}));
+	using IL = std::initializer_list<Permutation::Index>;
+	EXPECT_EQ(p, Permutation (IL{}));
+	EXPECT_EQ(p, Permutation (IL{}, IL{}));
+	EXPECT_EQ(p, Permutation (IL{}, IL{}, IL{}));
+	EXPECT_EQ(p, Permutation (IL{0}));
+	EXPECT_EQ(p, Permutation (IL{0}, IL{}));
+	EXPECT_EQ(p, Permutation (IL{}, IL{0}));
+	EXPECT_EQ(p, Permutation (IL{0}, IL{}, IL{1}));
+	EXPECT_EQ(p, Permutation (IL{1}, IL{2}, IL{3}));
+	EXPECT_EQ(p, Permutation (IL{10000}));
 }
 
 TEST(BanditPermutation, CycleConstruction) {

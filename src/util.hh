@@ -9,6 +9,7 @@
 #include <print>
 #include <ranges>
 #include <set>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <tuple>

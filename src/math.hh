@@ -130,74 +130,87 @@ private:
 // for puzzle logic
 
 class Permutation {
-	using Index = unsigned;
-	using Cycle = std::vector<Index>;
-	std::vector<Cycle> cycles_m {};
+	using Index_t = unsigned;
+	using Cycle_t = std::vector<Index_t>;
+	std::vector<Cycle_t> cycles_m {};
 
 public:
-	Permutation() = default;
+	using Index = Index_t;
+	using Cycle = Cycle_t;
 	auto operator<=>(Permutation const&) const = default;
 
-	Permutation(std::vector<Cycle> const& cycles) {
-		// Take notes on user input.
-		std::map<Index, unsigned> counts {};
-		for (auto const& cycle: cycles) {
-			for (Index i: cycle) {
-				counts[i]++;
-			}
+	Permutation() = default;
+
+	// Generate at compile time.
+	template <class ... Is>
+	Permutation(std::initializer_list<Is> ... ils)
+	:	Permutation {std::array {Cycle {ils.begin(), ils.end()} ... }} {}
+
+	template <class ... Cs>
+	Permutation(Cs const& ... cycles)
+	:	Permutation {std::array {cycles} ... } {}
+
+	// Generate at run time.
+	Permutation(stdr::input_range auto cycles)
+	requires stdr::input_range<stdr::range_value_t<decltype(cycles)>> {
+		if (duplicateIndices(cycles)) {
+			throw std::invalid_argument {"duplicate cycle indices"};
 		}
-		// Elements cannot be repeated within or between cycles
-		for (unsigned count: counts | stdv::values) if (count != 1) {
-			throw std::invalid_argument {"invalid cycle notation"};
-		}
-		// Assign.
-		cycles_m = cycles;
+		stdr::copy(cycles, std::back_inserter(cycles_m));
 		normalize();
 	}
 
-	// TODO: Either remove or replace with "word()" function.
-	Index operator[](Index i) const {
-		if (i > maxIndex()) return i;
-		for (auto const& cycle: cycles_m) {
-			for (unsigned j=0; j<cycle.size(); j++) {
-				if (cycle[j] == i) {
-					return (j+1 < cycle.size())
-					?	cycle[j+1]
-					:	cycle[0];
-				}
-			}
-		}
-		return i;
+	template <stdr::random_access_range Range>
+	auto apply(Range const& input) const {
+		auto result = std::vector<Index> {};
+		stdr::copy(input, std::back_inserter(result));
+		apply_inplace(result);
+		return result;
 	}
 
-	// Permute any range in-place.
 	template <stdr::random_access_range Range>
-	void shuffle(Range& input) const {
-		if (stdr::size(input) < maxIndex()) {
-			throw std::invalid_argument {"invalidly sized input range"};
+	auto apply_inplace(Range& result) const {
+		if (stdr::size(result) < size()) {
+			throw std::invalid_argument {"invalidly sized input"};
 		}
 		for (auto const& cycle: cycles_m) {
 			for (auto [i, j]: cycle | stdv::pairwise) {
-				std::swap(input[i], input[j]);
+				std::swap(result[i], result[j]);
 			}
 		}
+		return result;
+	}
+
+	std::size_t size() const {
+		if (cycles_m.empty()) return 0;
+		return cycles_m.back()[0] + 1;
+	}
+
+	auto word() const {
+		auto result = std::vector<Index> {};
+		return result = apply(stdv::iota(0uz, size()));
 	}
 
 private:
-	Index maxIndex() const { // MUST NOT be called pre-normalization.
-		if (cycles_m.empty()) return 0;
-		return cycles_m.back()[0];
+	bool duplicateIndices(stdr::input_range auto cycles) const {
+		std::set<Index> indicesUsed {};
+		for (auto const& c: cycles)
+		for (Index i: c) {
+			if (indicesUsed.contains(i)) return true;
+			indicesUsed.insert(i);
+		}
+		return false;
 	}
 
 	void normalize() {
+		std::erase_if(cycles_m,
+			[] (auto const& cycle) { return cycle.size() < 2; }
+		);
 		for (auto& cycle: cycles_m) {
 			stdr::rotate(cycle, stdr::max_element(cycle));
 		}
 		stdr::sort(cycles_m, stdr::less {},
 			[] (auto const& cycle) { return cycle[0]; }
-		);
-		std::erase_if(cycles_m,
-			[] (auto const& cycle) { return cycle.size() < 2; }
 		);
 	}
 };
