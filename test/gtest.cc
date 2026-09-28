@@ -6,9 +6,56 @@
 #define EXPECT_SAME_TYPE(T, U) EXPECT_TRUE((std::same_as<T, U>))
 #define EXPECT_CONCEPT(C, ... ) EXPECT_TRUE((C<__VA_ARGS__>))
 
-/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+/* ~~ 3D Coordinates ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-TEST(BanditPermutation, MemberTypes) {
+TEST(BanditCoordinate, CompiletimeProperties) {
+	EXPECT_CONCEPT(std::derived_from, Coord3, Vect3);
+	EXPECT_EQ(Coord3::Dimensions, 3);
+	using T = Coord3::ValueType;
+	EXPECT_CONCEPT(std::convertible_to, T, double);
+}
+
+TEST(BanditCoordinate, EmptyConstruction) {
+	Coord3 empty;
+	EXPECT_EQ(empty, Coord3 ());
+	EXPECT_EQ(empty, Coord3 {});
+	EXPECT_EQ(empty, Coord3 (0, 0, 0));
+	EXPECT_EQ(empty,(Coord3 {0, 0, 0}));
+	EXPECT_EQ(empty, Coord3 ({0, 0, 0}));
+}
+
+TEST(BanditCoordinate, Construction) {
+	Coord3 c {1, 2, 3};
+	using D = decltype(c.data());
+	EXPECT_EQ(c.data(),(D {1, 2, 3}));
+}
+
+TEST(BanditCoordinate, ElementAccess) {
+	Coord3 c {-1, -2, -3};
+	// These are [[nodiscard]], but I don't know how to test for that.
+	EXPECT_EQ(c.x(), -1);
+	EXPECT_EQ(c.y(), -2);
+	EXPECT_EQ(c.z(), -3);
+
+	using D = decltype(c.data());
+	c.x(1);
+	EXPECT_EQ(c.data(),(D { 1, -2, -3}));
+	c.y(2);
+	EXPECT_EQ(c.data(),(D { 1,  2, -3}));
+	c.z(3);
+	EXPECT_EQ(c.data(),(D { 1,  2,  3}));
+}
+
+TEST(BanditCoordinate, Distance) {
+	Coord3 me {3, 6, 9};
+	Coord3 you {-2, -5, -1};
+
+	EXPECT_EQ((me, you).distance2(), 246);
+}
+
+/* ~~ Permutations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+TEST(BanditPermutation, CompiletimeProperties) {
 	using P = Permutation;
 	EXPECT_CONCEPT(std::integral, P::Index);
 	EXPECT_CONCEPT(stdr::range, P::Cycle);

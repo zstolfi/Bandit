@@ -4,64 +4,69 @@
 /* ~~ Linear Algebra ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 // for 3D graphics
 
-class Coord3 {
+class Vect3 {
 protected:
-	std::array<double, 3> data_m {};
+	using T = double;
+	std::array<T, 3> elements_m {};
+
+	Vect3() = default;
+	Vect3(auto ... args): elements_m{T(args) ... } {}
+	virtual ~Vect3() = default;
+
+	virtual void normalize() {/* Do nothing. */}
 
 public:
-	Coord3(): data_m{0, 0, 0} {}
-	Coord3(double x, double y, double z): data_m{x, y, z} {}
-	auto operator<=>(Coord3 const&) const = default;
-
-	// Getters    Ex: value = position.x();
-	double x() const { return data_m[0]; }
-	double y() const { return data_m[1]; }
-	double z() const { return data_m[2]; }
-
-	// Setters    Ex: position.x(value);
-	// This syntax is strange but it allows us to keep a close eye on our data.
-	// If we were to send out references, it means the user could de-normalize
-	// our data at will.
-	void x(double val) { data_m[0] = val; normalize(); }
-	void y(double val) { data_m[1] = val; normalize(); }
-	void z(double val) { data_m[2] = val; normalize(); }
-
-	// Properties
-	double length2() const {
-		return
-			data_m[0] * data_m[0] +
-			data_m[1] * data_m[1] +
-			data_m[2] * data_m[2]
-		;
-	}
-
-protected:
-	virtual void normalize() {/* Do nothing. */}
+	using ValueType = T;
+	static unsigned constexpr Dimensions = 3;
+	auto operator<=>(Vect3 const&) const = default;
+	auto const& data() { return elements_m; };
 };
+
+class Coord3: public Vect3 {
+public:
+	Coord3(): Vect3{0, 0, 0} { normalize(); }
+	Coord3(double x, double y, double z): Vect3{x, y, z} { normalize(); }
+
+	// Operators
+	Coord3& operator+=(Coord3 const&);
+	friend Coord3 operator+(Coord3 lhs, Coord3 const& rhs);
+
+	Coord3& operator-=(Coord3 const&);
+	friend Coord3 operator-(Coord3 lhs, Coord3 const& rhs);
+
+	// Unified read/write syntax. One name is overloaded for both actions.
+	// Properties have this feature as when they're able.
+	[[nodiscard]] double x() const;
+	void x(double);
+
+	[[nodiscard]] double y() const;
+	void y(double);
+
+	[[nodiscard]] double z() const;
+	void z(double);
+
+	[[nodiscard]] double length2() const;
+	void length2(double);
+};
+
+//template <Coord3, Coord3>
+class Parameters {
+	std::tuple<Coord3 const&, Coord3 const&> params_m;
+public:
+	Parameters(Coord3 const& a, Coord3 const& b): params_m{a, b} {}
+
+	Vect3::ValueType distance2() const;
+};
+
+Parameters operator,(Coord3 const& a, Coord3 const& b);
 
 class Norm3: public Coord3 {
 public:
 	Norm3(): Coord3{1, 0, 0} {}
-	Norm3(Coord3 c): Coord3{c} { normalize(); }
-	Norm3(double x, double y, double z): Coord3{x, y, z} { normalize(); }
-	auto operator<=>(Norm3 const&) const = default;
+	using Coord3::Coord3;
 
 private:
-	void normalize() override {
-		bool strict = std::is_constant_evaluated();
-		if (length2() != 0.0) {
-			double inv = std::pow(length2(), -0.5);
-			data_m[0] *= inv;
-			data_m[1] *= inv;
-			data_m[2] *= inv;
-		}
-		else {
-			// Defining invalid normals at compile time is definitely an error.
-			if (strict) throw std::domain_error {"Norm3 division by 0"};
-			// Otherwise it's best to just keep our state valid.
-			else *this = {};
-		}
-	}
+	void normalize() override;
 };
 
 class Ray3 {
@@ -76,13 +81,12 @@ public:
 
 	auto operator<=>(Ray3 const&) const = default;
 
-	// Getters
-	Coord3 const& origin() const { return origin_m; }
-	Norm3 const& direction() const { return direction_m; }
+	// Properties
+	[[nodiscard]] Coord3 const& origin() const;
+	void origin(Coord3);
 
-	// Setters
-	void origin(Coord3 c) { origin_m = c; }
-	void direction(Norm3 n) { direction_m = n; }
+	[[nodiscard]] Norm3 const& direction() const;
+	void direction(Norm3);
 };
 
 class Plane3 {
@@ -100,30 +104,18 @@ public:
 
 	auto operator<=>(Plane3 const&) const = default;
 
-	// Getters
-	Coord3 const& origin() const { return origin_m; }
-	Norm3 const& direction() const { return direction_m; }
+	// Properties
+	[[nodiscard]] Coord3 const& origin() const;
+	void origin(Coord3 c);
 
-	// Setters
-	void origin(Coord3 c) { origin_m = c; normalize(); }
-	void direction(Norm3 n) { direction_m = n; }
+	[[nodiscard]] Norm3 const& direction() const;
+	void direction(Norm3 n);
 
 //	// Properties
 //	double length();
 
 private:
-	void normalize() {
-		double dist =
-			origin_m.x() * direction_m.x() +
-			origin_m.y() * direction_m.y() +
-			origin_m.z() * direction_m.z()
-		;
-		origin_m = Coord3 {
-			direction_m.x() * dist,
-			direction_m.y() * dist,
-			direction_m.z() * dist,
-		};
-	}
+	void normalize();
 };
 
 /* ~~ Group Theory ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
@@ -147,7 +139,7 @@ public:
 	:	Permutation {std::array {Cycle {ils.begin(), ils.end()} ... }} {}
 
 	template <class ... Cs>
-	Permutation(Cs const& ... cycles)
+	Permutation(Cs const& ... cycles) requires (IsRangeOf<Cs, Index> && ... )
 	:	Permutation {std::array {cycles} ... } {}
 
 	// Generate at run time.
@@ -256,6 +248,4 @@ struct std::formatter<Permutation>: std::formatter<std::string> {
 	}
 };
 
-std::ostream& operator<<(std::ostream& os, Permutation const& p) {
-	return os << std::format("{}", p);
-}
+std::ostream& operator<<(std::ostream& os, Permutation const& p);
