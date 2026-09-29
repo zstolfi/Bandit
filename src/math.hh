@@ -49,17 +49,6 @@ public:
 	void length2(double);
 };
 
-//template <Coord3, Coord3>
-class Parameters {
-	std::tuple<Coord3 const&, Coord3 const&> params_m;
-public:
-	Parameters(Coord3 const& a, Coord3 const& b): params_m{a, b} {}
-
-	Vect3::ValueType distance2() const;
-};
-
-Parameters operator,(Coord3 const& a, Coord3 const& b);
-
 class Norm3: public Coord3 {
 public:
 	Norm3(): Coord3{1, 0, 0} {}
@@ -117,6 +106,18 @@ public:
 private:
 	void normalize();
 };
+
+/* ~~ Relational Properties ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+template <>
+struct RegularParameters<Coord3, Coord3>
+:	RpOverload<Coord3, Coord3> {
+	using RpOverload<Coord3, Coord3>::RpOverload;
+
+	double distance2() const;
+};
+
+RegularParameters<Coord3, Coord3> operator,(Coord3 a, Coord3 b);
 
 /* ~~ Group Theory ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 // for puzzle logic

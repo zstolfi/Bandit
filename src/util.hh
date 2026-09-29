@@ -45,3 +45,48 @@ concept IsRangeOf =
 		T
 	>
 ;
+
+/* ~~ Math Helpers ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+// Regular parameters are used in Bandit's linear algebra library.
+// An example would look something like this:
+
+//	Point a, b;
+//	std::cout << a.location();
+//	std::cout << b.location();
+//	std::cout << (a, b).distance();
+
+// (a, b) defines a value of type RegularParameters<Point, Point>.
+template <class ... >
+struct RegularParameters {};
+
+template <class ... Args>
+RegularParameters(Args ... ) -> RegularParameters<Args ... >;
+
+// To implement properties of regular parameters, we specialize like so:
+
+//	template <>
+//	struct RegularParameters<Line, Plane>
+//	:	RpOverload<Line, Plane> {
+//		using RpOverload<Line, Plane>::RpOverload;
+//
+//		auto intersection() {/* ... */}
+//	};
+//
+//	auto operator,(Line a, Plane b) { return RegularParameters {a, b}; }
+
+// Now the following call is possible:
+
+//	(line, plane).intersection();
+
+template <class ... Args>
+struct RpOverload: public std::tuple<Args ... > {
+	using std::tuple<Args ... >::tuple;
+
+protected:
+	template <auto I>
+	auto const& get() const { return std::get<I>(*this); }
+
+	template <class T>
+	auto const& get() const { return std::get<T>(*this); }
+};

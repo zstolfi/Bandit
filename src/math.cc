@@ -39,14 +39,7 @@ double Coord3::length2() const {
 	+      elements_m[2] * elements_m[2];
 }
 
-Vect3::ValueType Parameters::distance2() const {
-	auto [a, b] = params_m;
-	return (a - b).length2();
-};
-
 //void Coord3::length2(double) {/* TODO */}
-
-Parameters operator,(Coord3 const& a, Coord3 const& b) { return Parameters {a, b}; }
 
 void Norm3::normalize() {
 	if (length2() != 0.0) {
@@ -99,6 +92,20 @@ void Plane3::normalize() {
 		direction_m.z() * dist,
 	};
 }
+
+/* ~~ Relational Properties ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+double RegularParameters<Coord3, Coord3>::distance2() const {
+	Coord3 diff = get<0>() - get<1>();
+	return diff.x() * diff.x()
+	+      diff.y() * diff.y()
+	+      diff.z() * diff.z();
+}
+
+RegularParameters<Coord3, Coord3> operator,(Coord3 a, Coord3 b) {
+	return RegularParameters {a, b};
+}
+
 
 /* ~~ Formatting & Printing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
