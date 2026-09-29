@@ -145,6 +145,7 @@ void Plane3::normalize() {
 
 /* ~~ Relational Properties ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+template <>
 Coord3::Scalar RegularParameters<Coord3, Coord3>::distance2() const {
 	Coord3 diff = get<0>() - get<1>();
 	return diff.x() * diff.x()
@@ -155,7 +156,6 @@ Coord3::Scalar RegularParameters<Coord3, Coord3>::distance2() const {
 RegularParameters<Coord3, Coord3> operator,(Coord3 a, Coord3 b) {
 	return RegularParameters {a, b};
 }
-
 
 /* ~~ Formatting & Printing ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 

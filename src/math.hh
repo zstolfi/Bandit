@@ -124,13 +124,28 @@ private:
 
 /* ~~ Relational Properties ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-template <>
-struct RegularParameters<Coord3, Coord3>
-:	RpOverload<Coord3, Coord3> {
-	using RpOverload<Coord3, Coord3>::RpOverload;
+// Regular parameters enable the syntax of the following example:
+//	Location home, work;
+//	std::cout << home.address();
+//	std::cout << work.address();
+//	std::cout << (home, work).distance();
 
-	Coord3::Scalar distance() const;
-	Coord3::Scalar distance2() const;
+template <class ... Args>
+class RegularParameters: std::tuple<Args ... > {
+	template <class ... Ts>
+	bool static constexpr Arguments =
+		std::same_as<std::tuple<Ts ... >, std::tuple<Args ... >>
+	;
+
+public:
+	RegularParameters(Args const& ... args): std::tuple<Args ... >{args ... } {}
+
+	Coord3::Scalar distance() const requires(Arguments<Coord3, Coord3>);
+	Coord3::Scalar distance2() const requires(Arguments<Coord3, Coord3>);
+
+private:
+	template <auto I>
+	auto const& get() const { return std::get<I>(*this); }
 };
 
 RegularParameters<Coord3, Coord3> operator,(Coord3 a, Coord3 b);
