@@ -34,6 +34,13 @@ public:
 	Coord3& operator-=(Coord3 const&);
 	friend Coord3 operator-(Coord3 lhs, Coord3 const& rhs);
 
+	Coord3& operator*=(double);
+	friend Coord3 operator*(Coord3 lhs, double rhs);
+	friend Coord3 operator*(double lhs, Coord3 rhs);
+
+	Coord3& operator/=(double);
+	friend Coord3 operator/(Coord3 lhs, double rhs);
+
 	// Unified read/write syntax. One name is overloaded for both actions.
 	// Properties have this feature as when they're able.
 	[[nodiscard]] double x() const;
@@ -45,8 +52,13 @@ public:
 	[[nodiscard]] double z() const;
 	void z(double);
 
-	[[nodiscard]] double length2() const;
-	void length2(double);
+	// On its own, "distance" is a measurement from the origin.
+	[[nodiscard]] double distance() const;
+	void distance(double);
+
+	// You can also measure distance squared, for more efficient computation.
+	[[nodiscard]] double distance2() const;
+	void distance2(double);
 };
 
 class Norm3: public Coord3 {
@@ -114,6 +126,7 @@ struct RegularParameters<Coord3, Coord3>
 :	RpOverload<Coord3, Coord3> {
 	using RpOverload<Coord3, Coord3>::RpOverload;
 
+	double distance() const;
 	double distance2() const;
 };
 

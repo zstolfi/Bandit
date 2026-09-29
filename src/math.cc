@@ -1,9 +1,21 @@
 #include "math.hh"
 
+namespace {
+	void apply3(auto&& operation, auto& result, auto const& other) {
+		for (unsigned i=0; i<3; i++) {
+			result[i] = operation(result[i], other[i]);
+		}
+	}
+
+	void apply3(auto&& operation, auto& result, Vect3::ValueType val) {
+		for (unsigned i=0; i<3; i++) {
+			result[i] = operation(result[i], val);
+		}
+	}
+}
+
 Coord3& Coord3::operator+=(Coord3 const& other) {
-	this->elements_m[0] += other.elements_m[0];
-	this->elements_m[1] += other.elements_m[1];
-	this->elements_m[2] += other.elements_m[2];
+	apply3(std::plus {}, this->elements_m, other.elements_m);
 	return *this;
 }
 
@@ -12,9 +24,7 @@ Coord3 operator+(Coord3 lhs, Coord3 const& rhs) {
 }
 
 Coord3& Coord3::operator-=(Coord3 const& other) {
-	this->elements_m[0] -= other.elements_m[0];
-	this->elements_m[1] -= other.elements_m[1];
-	this->elements_m[2] -= other.elements_m[2];
+	apply3(std::minus {}, this->elements_m, other.elements_m);
 	return *this;
 }
 
@@ -22,28 +32,68 @@ Coord3 operator-(Coord3 lhs, Coord3 const& rhs) {
 	return lhs -= rhs;
 }
 
+Coord3& Coord3::operator*=(double val) {
+	apply3(std::multiplies {}, this->elements_m, val);
+	return *this;
+}
+
+Coord3 operator*(Coord3 lhs, double rhs) {
+	return lhs *= rhs;
+}
+
+Coord3 operator*(double lhs, Coord3 rhs) {
+	return rhs *= lhs;
+}
+
+Coord3& Coord3::operator/=(double val) {
+	apply3(std::divides {}, this->elements_m, val);
+	return *this;
+}
+
+Coord3 operator/(Coord3 lhs, double rhs) {
+	return lhs /= rhs;
+}
+
 double Coord3::x() const { return elements_m[0]; }
-void Coord3::x(double value) { elements_m[0] = value; }
+void Coord3::x(double to) { elements_m[0] = to; }
 
 double Coord3::y() const { return elements_m[1]; }
-void Coord3::y(double value) { elements_m[1] = value; }
+void Coord3::y(double to) { elements_m[1] = to; }
 
 double Coord3::z() const { return elements_m[2]; }
-void Coord3::z(double value) { elements_m[2] = value; }
+void Coord3::z(double to) { elements_m[2] = to; }
 
 // Properties
-double Coord3::length2() const {
+double Coord3::distance() const {
+	return std::sqrt(distance2());
+}
+
+void Coord3::distance(double to) {
+	auto from = distance();
+	if (from != 0.0) {
+		*this *= to/from;
+	}
+	else *this = {to, 0, 0};
+}
+
+double Coord3::distance2() const {
 //	return (*this, *this).dot();
 	return elements_m[0] * elements_m[0]
 	+      elements_m[1] * elements_m[1]
 	+      elements_m[2] * elements_m[2];
 }
 
-//void Coord3::length2(double) {/* TODO */}
+void Coord3::distance2(double to) {
+	auto from = distance2();
+	if (from != 0.0) {
+		*this *= std::sqrt(to/from);
+	}
+	else *this = {std::sqrt(to), 0, 0};
+}
 
 void Norm3::normalize() {
-	if (length2() != 0.0) {
-		double inv = std::pow(length2(), -0.5);
+	if (distance2() != 0.0) {
+		double inv = std::pow(distance2(), -0.5);
 		elements_m[0] *= inv;
 		elements_m[1] *= inv;
 		elements_m[2] *= inv;

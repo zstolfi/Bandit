@@ -30,7 +30,7 @@ TEST(BanditCoordinate, Construction) {
 	EXPECT_EQ(c.data(),(D {1, 2, 3}));
 }
 
-TEST(BanditCoordinate, ElementAccess) {
+TEST(BanditCoordinate, Position) {
 	Coord3 c {-1, -2, -3};
 	// These are [[nodiscard]], but I don't know how to test for that.
 	EXPECT_EQ(c.x(), -1);
@@ -47,6 +47,49 @@ TEST(BanditCoordinate, ElementAccess) {
 }
 
 TEST(BanditCoordinate, Distance) {
+	Coord3 position {};
+	Coord3::ValueType const Epsilon {1e-9}; // one billionth
+
+	// Reading
+	position = {0, 0, 0};
+	EXPECT_NEAR(position.distance() , 0, Epsilon);
+	EXPECT_NEAR(position.distance2(), 0, Epsilon);
+
+	position = {1, 0, 0};
+	EXPECT_NEAR(position.distance() , 1, Epsilon);
+	EXPECT_NEAR(position.distance2(), 1, Epsilon);
+
+	position = {3, 4, 12}; // https://math.stackexchange.com/a/2863663
+	EXPECT_NEAR(position.distance() , 13, Epsilon);
+	EXPECT_NEAR(position.distance2(), 169, Epsilon);
+
+	position = {0, 1, -1};
+	EXPECT_NEAR(position.distance() , std::sqrt(2), Epsilon);
+	EXPECT_NEAR(position.distance2(), 2           , Epsilon);
+
+	position = {2, 5, 1};
+	EXPECT_NEAR(position.distance() , std::sqrt(30), Epsilon);
+	EXPECT_NEAR(position.distance2(), 30           , Epsilon);
+
+	// Writing
+	position.distance(9);
+	EXPECT_NEAR(position.distance() , 9 , Epsilon);
+	EXPECT_NEAR(position.distance2(), 81, Epsilon);
+
+	position.distance(0);
+	EXPECT_NEAR(position.distance() , 0, Epsilon);
+	EXPECT_NEAR(position.distance2(), 0, Epsilon);
+
+	position.distance2(25);
+	EXPECT_NEAR(position.distance() , 5 , Epsilon);
+	EXPECT_NEAR(position.distance2(), 25, Epsilon);
+
+	position.distance2(0);
+	EXPECT_NEAR(position.distance() , 0, Epsilon);
+	EXPECT_NEAR(position.distance2(), 0, Epsilon);
+}
+
+TEST(BanditCoordinatePair, Distance) {
 	Coord3 me {3, 6, 9};
 	Coord3 you {-2, -5, -1};
 
