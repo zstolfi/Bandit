@@ -6,17 +6,20 @@
 
 class Vect3 {
 protected:
-	using T = double;
-	std::array<T, 3> elements_m {};
+	template <class ... >
+	friend struct RegularParameters;
+
+	using Scalar = double;
+	std::array<Scalar, 3> elements_m {};
 
 	Vect3() = default;
-	Vect3(auto ... args): elements_m{T(args) ... } {}
+	Vect3(auto ... args): elements_m{Scalar(args) ... } {}
 	virtual ~Vect3() = default;
 
 	virtual void normalize() {/* Do nothing. */}
 
 public:
-	using ValueType = T;
+	using ScalarType = Scalar;
 	static unsigned constexpr Dimensions = 3;
 	auto operator<=>(Vect3 const&) const = default;
 	auto const& data() { return elements_m; };
@@ -25,7 +28,7 @@ public:
 class Coord3: public Vect3 {
 public:
 	Coord3(): Vect3{0, 0, 0} { normalize(); }
-	Coord3(double x, double y, double z): Vect3{x, y, z} { normalize(); }
+	Coord3(Scalar x, Scalar y, Scalar z): Vect3{x, y, z} { normalize(); }
 
 	// Operators
 	Coord3& operator+=(Coord3 const&);
@@ -34,31 +37,31 @@ public:
 	Coord3& operator-=(Coord3 const&);
 	friend Coord3 operator-(Coord3 lhs, Coord3 const& rhs);
 
-	Coord3& operator*=(double);
-	friend Coord3 operator*(Coord3 lhs, double rhs);
-	friend Coord3 operator*(double lhs, Coord3 rhs);
+	Coord3& operator*=(Scalar);
+	friend Coord3 operator*(Coord3 lhs, Scalar rhs);
+	friend Coord3 operator*(Scalar lhs, Coord3 rhs);
 
-	Coord3& operator/=(double);
-	friend Coord3 operator/(Coord3 lhs, double rhs);
+	Coord3& operator/=(Scalar);
+	friend Coord3 operator/(Coord3 lhs, Scalar rhs);
 
 	// Unified read/write syntax. One name is overloaded for both actions.
 	// Properties have this feature as when they're able.
-	[[nodiscard]] double x() const;
-	void x(double);
+	[[nodiscard]] Scalar x() const;
+	void x(Scalar);
 
-	[[nodiscard]] double y() const;
-	void y(double);
+	[[nodiscard]] Scalar y() const;
+	void y(Scalar);
 
-	[[nodiscard]] double z() const;
-	void z(double);
+	[[nodiscard]] Scalar z() const;
+	void z(Scalar);
 
 	// On its own, "distance" is a measurement from the origin.
-	[[nodiscard]] double distance() const;
-	void distance(double);
+	[[nodiscard]] Scalar distance() const;
+	void distance(Scalar);
 
 	// You can also measure distance squared, for more efficient computation.
-	[[nodiscard]] double distance2() const;
-	void distance2(double);
+	[[nodiscard]] Scalar distance2() const;
+	void distance2(Scalar);
 };
 
 class Norm3: public Coord3 {
@@ -113,7 +116,7 @@ public:
 	void direction(Norm3 n);
 
 //	// Properties
-//	double length();
+//	Scalar length();
 
 private:
 	void normalize();
@@ -126,8 +129,8 @@ struct RegularParameters<Coord3, Coord3>
 :	RpOverload<Coord3, Coord3> {
 	using RpOverload<Coord3, Coord3>::RpOverload;
 
-	double distance() const;
-	double distance2() const;
+	Coord3::Scalar distance() const;
+	Coord3::Scalar distance2() const;
 };
 
 RegularParameters<Coord3, Coord3> operator,(Coord3 a, Coord3 b);

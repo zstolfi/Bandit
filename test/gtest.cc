@@ -8,11 +8,15 @@
 
 /* ~~ 3D Coordinates ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
+TEST(BanditVector, CompiletimeProperties) {
+	EXPECT_EQ(Vect3::Dimensions, 3);
+	EXPECT_CONCEPT(std::convertible_to, Vect3::ScalarType, double);
+}
+
 TEST(BanditCoordinate, CompiletimeProperties) {
 	EXPECT_CONCEPT(std::derived_from, Coord3, Vect3);
 	EXPECT_EQ(Coord3::Dimensions, 3);
-	using T = Coord3::ValueType;
-	EXPECT_CONCEPT(std::convertible_to, T, double);
+	EXPECT_CONCEPT(std::convertible_to, Coord3::ScalarType, double);
 }
 
 TEST(BanditCoordinate, EmptyConstruction) {
@@ -48,7 +52,7 @@ TEST(BanditCoordinate, Position) {
 
 TEST(BanditCoordinate, Distance) {
 	Coord3 position {};
-	Coord3::ValueType const Epsilon {1e-9}; // one billionth
+	Coord3::ScalarType const Epsilon {1e-9}; // one billionth
 
 	// Reading
 	position = {0, 0, 0};

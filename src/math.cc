@@ -7,7 +7,7 @@ namespace {
 		}
 	}
 
-	void apply3(auto&& operation, auto& result, Vect3::ValueType val) {
+	void apply3(auto&& operation, auto& result, Vect3::ScalarType val) {
 		for (unsigned i=0; i<3; i++) {
 			result[i] = operation(result[i], val);
 		}
@@ -32,59 +32,59 @@ Coord3 operator-(Coord3 lhs, Coord3 const& rhs) {
 	return lhs -= rhs;
 }
 
-Coord3& Coord3::operator*=(double val) {
+Coord3& Coord3::operator*=(Scalar val) {
 	apply3(std::multiplies {}, this->elements_m, val);
 	return *this;
 }
 
-Coord3 operator*(Coord3 lhs, double rhs) {
+Coord3 operator*(Coord3 lhs, Coord3::Scalar rhs) {
 	return lhs *= rhs;
 }
 
-Coord3 operator*(double lhs, Coord3 rhs) {
+Coord3 operator*(Coord3::Scalar lhs, Coord3 rhs) {
 	return rhs *= lhs;
 }
 
-Coord3& Coord3::operator/=(double val) {
+Coord3& Coord3::operator/=(Scalar val) {
 	apply3(std::divides {}, this->elements_m, val);
 	return *this;
 }
 
-Coord3 operator/(Coord3 lhs, double rhs) {
+Coord3 operator/(Coord3 lhs, Coord3::Scalar rhs) {
 	return lhs /= rhs;
 }
 
-double Coord3::x() const { return elements_m[0]; }
-void Coord3::x(double to) { elements_m[0] = to; }
+Coord3::Scalar Coord3::x() const { return elements_m[0]; }
+void Coord3::x(Scalar to) { elements_m[0] = to; }
 
-double Coord3::y() const { return elements_m[1]; }
-void Coord3::y(double to) { elements_m[1] = to; }
+Coord3::Scalar Coord3::y() const { return elements_m[1]; }
+void Coord3::y(Scalar to) { elements_m[1] = to; }
 
-double Coord3::z() const { return elements_m[2]; }
-void Coord3::z(double to) { elements_m[2] = to; }
+Coord3::Scalar Coord3::z() const { return elements_m[2]; }
+void Coord3::z(Scalar to) { elements_m[2] = to; }
 
 // Properties
-double Coord3::distance() const {
+Coord3::Scalar Coord3::distance() const {
 	return std::sqrt(distance2());
 }
 
-void Coord3::distance(double to) {
-	auto from = distance();
+void Coord3::distance(Scalar to) {
+	Scalar from = distance();
 	if (from != 0.0) {
 		*this *= to/from;
 	}
 	else *this = {to, 0, 0};
 }
 
-double Coord3::distance2() const {
+Coord3::Scalar Coord3::distance2() const {
 //	return (*this, *this).dot();
 	return elements_m[0] * elements_m[0]
 	+      elements_m[1] * elements_m[1]
 	+      elements_m[2] * elements_m[2];
 }
 
-void Coord3::distance2(double to) {
-	auto from = distance2();
+void Coord3::distance2(Scalar to) {
+	Scalar from = distance2();
 	if (from != 0.0) {
 		*this *= std::sqrt(to/from);
 	}
@@ -93,7 +93,7 @@ void Coord3::distance2(double to) {
 
 void Norm3::normalize() {
 	if (distance2() != 0.0) {
-		double inv = std::pow(distance2(), -0.5);
+		Scalar inv = std::pow(distance2(), -0.5);
 		elements_m[0] *= inv;
 		elements_m[1] *= inv;
 		elements_m[2] *= inv;
@@ -131,7 +131,7 @@ Norm3 const& Plane3::direction() const { return direction_m; }
 void Plane3::direction(Norm3 n) { direction_m = n; }
 
 void Plane3::normalize() {
-	double dist =
+	Vect3::ScalarType dist =
 		origin_m.x() * direction_m.x() +
 		origin_m.y() * direction_m.y() +
 		origin_m.z() * direction_m.z()
@@ -145,7 +145,7 @@ void Plane3::normalize() {
 
 /* ~~ Relational Properties ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-double RegularParameters<Coord3, Coord3>::distance2() const {
+Coord3::Scalar RegularParameters<Coord3, Coord3>::distance2() const {
 	Coord3 diff = get<0>() - get<1>();
 	return diff.x() * diff.x()
 	+      diff.y() * diff.y()
