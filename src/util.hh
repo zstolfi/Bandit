@@ -57,12 +57,6 @@ concept IsRangeOf =
 //	std::cout << (a, b).distance();
 
 // (a, b) defines a value of type RegularParameters<Point, Point>.
-template <class ... >
-struct RegularParameters {};
-
-template <class ... Args>
-RegularParameters(Args ... ) -> RegularParameters<Args ... >;
-
 // To implement properties of regular parameters, we specialize like so:
 
 //	template <>
@@ -78,6 +72,12 @@ RegularParameters(Args ... ) -> RegularParameters<Args ... >;
 // Now the following call is possible:
 
 //	(line, plane).intersection();
+
+template <class ... >
+struct RegularParameters {};
+
+template <class ... Args>
+RegularParameters(Args ... ) -> RegularParameters<Args ... >;
 
 template <class ... Args>
 struct RpOverload: public std::tuple<Args ... > {

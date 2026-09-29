@@ -9,10 +9,10 @@ concept IsPuzzle = std::regular<T> && requires(
 ) {
 	// The only possible way the user can modify our puzzle's state is by
 	// picking it up, and giving it a twist :)
-	modifiable.turn(move);
+	modifiable.apply(move);
 
 	// Every move advertised by our puzzle is allowed to be tried. It's just
-	// that bandaged puzzles will sometimes "no nothing".
+	// that bandaged puzzles will sometimes "do nothing".
 	{ state.moves() } -> IsRangeOf<typename T::Move>;
 
 	// We can report back any appearance information we'd like. It's usually a
@@ -62,7 +62,7 @@ class Cube2x2x2 {
 		unsigned position_m {}, id_m {};
 		Sticker_t() = default;
 		Sticker_t(unsigned position, unsigned id)
-		:	position_m{position}, id_m{id} {}
+		:	position_m {position}, id_m {id} {}
 
 	public:
 		unsigned position() const { return position_m; }
@@ -135,7 +135,7 @@ public:
 	using Sticker = Sticker_t;
 	auto operator<=>(Cube2x2x2 const&) const = default;
 
-	void turn(Move move) {
+	void apply(Move move) {
 		properties_m.permutations[move.face].apply_inplace(state_m);
 	}
 

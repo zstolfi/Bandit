@@ -40,12 +40,11 @@ void setup(AppWindow& window, AppState& state) {
 	for (auto sticker: state.puzzle.appearance()) {
 		auto const& polygon = sticker.polygon();
 		auto const& color = Colors[sticker.color()];
-		bool show = sticker.color() == 0;
 		for (Coord3 const& c: polygon) {
 			state.stickerIndices[sticker.position()].push_back(index);
-			state.vertices.push_back(show? -c.y(): 0.0);
-			state.vertices.push_back(show?  c.z(): 0.0);
-			state.vertices.push_back(/*show? c.z():*/ 0.0);
+			state.vertices.push_back(c.x());
+			state.vertices.push_back(c.y());
+			state.vertices.push_back(c.z());
 			state.vertices.push_back(color[0]);
 			state.vertices.push_back(color[1]);
 			state.vertices.push_back(color[2]);
@@ -76,7 +75,7 @@ void setup(AppWindow& window, AppState& state) {
 void processInput(AppWindow& window, AppState& state) {
 	auto turn = [&] (unsigned index, unsigned times=1) {
 		auto move = state.puzzle.moves()[index];
-		while (times--) state.puzzle.turn(move);
+		while (times--) state.puzzle.apply(move);
 	};
 
 	static std::map<int, std::function<void ()>> const keyMap {
