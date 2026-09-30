@@ -1,4 +1,6 @@
 #pragma once
+
+// STL
 #include <algorithm>
 #include <array>
 #include <concepts>
@@ -15,9 +17,13 @@
 #include <tuple>
 #include <type_traits>
 #include <vector>
+
+// C library
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+
+// Shorthands
 namespace stdfs = std::filesystem;
 namespace stdr = std::ranges;
 namespace stdv = std::views;

@@ -1,31 +1,16 @@
+#include "graphics.hh"
 #include "puzzle.hh"
 #include "util.hh"
 #include "window.hh"
-
-auto const Colors = std::vector<std::array<float, 3>> {
-	{{0.9, 0.5, 0.2}}, // Orange
-	{{0.9, 0.2, 0.2}}, // Red
-	{{0.9, 0.9, 0.9}}, // White
-	{{0.9, 0.9, 0.2}}, // Yellow
-	{{0.2, 0.3, 0.9}}, // Blue
-	{{0.1, 0.9, 0.2}}, // Green
-};
-
-auto const ColorsBackground = std::vector<std::array<float, 3>> {
-	{{0.7, 0.7, 0.7}}, // Unsolved
-	{{0.6, 0.7, 0.6}}, // Solved
-};
 
 /* ~~ Application State ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 struct AppState {
 	std::vector<std::string_view> args {};
-	std::vector<GLfloat> vertices {};
-	std::vector<GLuint> indices {};
-	std::map<unsigned, std::vector<unsigned>> stickerIndices {};
 
 	using Puzzle = Cube2x2x2;
 	Puzzle puzzle {};
+	Model<Puzzle> model {};
 	bool solved {}, update {true};
 
 	struct KeyInfo { bool state {}; signed delta {}; };
@@ -35,31 +20,8 @@ struct AppState {
 using AppWindow = Window<AppState>;
 
 void setup(AppWindow& window, AppState& state) {
-	// Create our puzzle's geometry.
-	GLuint index = 0;
-	for (auto sticker: state.puzzle.appearance()) {
-		auto const& polygon = sticker.polygon();
-		auto const& color = Colors[sticker.color()];
-		for (Coord3 const& c: polygon) {
-			state.stickerIndices[sticker.position()].push_back(index);
-			state.vertices.push_back(c.x());
-			state.vertices.push_back(c.y());
-			state.vertices.push_back(c.z());
-			state.vertices.push_back(color[0]);
-			state.vertices.push_back(color[1]);
-			state.vertices.push_back(color[2]);
-			index++;
-		}
-		state.indices.push_back(index-4 + 0);
-		state.indices.push_back(index-4 + 1);
-		state.indices.push_back(index-4 + 2);
-		state.indices.push_back(index-4 + 2);
-		state.indices.push_back(index-4 + 3);
-		state.indices.push_back(index-4 + 0);
-	}
-
-	window.vertices(state.vertices);
-	window.indices(state.indices);
+	window.vertices(state.model.vertices());
+	window.indices(state.model.indices());
 
 	// Keep track of which keys been pressed.
 	window.bind(glfwSetKeyCallback,
@@ -119,21 +81,8 @@ void renderLoop(AppWindow& window, AppState& state) {
 		state.update = false;
 		state.solved = state.puzzle.solved();
 
-		// Update the puzzle's display.
-		for (auto sticker: state.puzzle.appearance()) {
-			auto color = Colors[sticker.color()];
-			auto position = sticker.position();
-			for (unsigned index: state.stickerIndices[position]) {
-				state.vertices[6 * index + 3] = color[0];
-				state.vertices[6 * index + 4] = color[1];
-				state.vertices[6 * index + 5] = color[2];
-			}
-		}
-
-		// Re-send vertex data. I'm pretty sure this is the wrong way of
-		// updating the display of the puzzle. I think the proper solution is
-		// to use the vertex shader to update each sticker's position.
-		window.vertices(state.vertices);
+		state.model.update(state.puzzle);
+		window.vertices(state.model.vertices());
 	}
 
 	// Clear our window's screen.
@@ -144,7 +93,12 @@ void renderLoop(AppWindow& window, AppState& state) {
 	// Draw our beautiful puzzle.
 	glUseProgram(window.shaderProgram());
 	glBindVertexArray(window.VAO());
-	glDrawElements(GL_TRIANGLES, state.indices.size(), GL_UNSIGNED_INT, {});
+	glDrawElements(
+		GL_TRIANGLES,
+		state.model.indices().size(),
+		GL_UNSIGNED_INT,
+		{}
+	);
 	glBindVertexArray(0);
 
 	// Get ready for the next frame.

@@ -142,17 +142,32 @@ public:
 	auto const& moves() const { return properties_m.moves; }
 
 	auto appearance() const {
-		auto result = std::array<Sticker, 24> {};
+		struct Result {
+			std::array<Sticker, 24> stickers {};
+			std::array<std::set<unsigned>, 8> cubies {{
+				{ 0,  8, 16},
+				{ 1, 12, 17},
+				{ 2,  9, 20},
+				{ 3, 13, 21},
+				{ 4, 10, 22},
+				{ 5, 14, 23},
+				{ 6, 11, 18},
+				{ 7, 15, 19},
+			}};
+		};
+		auto result = Result {};
+
 		for (unsigned i=0; i<24; i++) {
-			result[i] = Sticker {i, state_m[i]};
+			result.stickers[i] = Sticker {i, state_m[i]};
 		}
+
 		return result;
 	}
 
 	bool solved() const {
 		using Color = unsigned;
 		std::array<std::vector<Color>, 6> faces {};
-		for (auto sticker: appearance()) {
+		for (auto sticker: appearance().stickers) {
 			auto& face = faces[sticker.face()];
 			auto color = sticker.color();
 			if (face.size() > 1 && face.back() != color) {

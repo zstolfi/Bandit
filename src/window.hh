@@ -53,7 +53,7 @@ public:
 	GLuint EBO() const { return EBO_m; };
 
 	// Setters
-	void vertices(std::vector<GLfloat>& vs) {
+	void vertices(std::vector<GLfloat> const& vs) {
 		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
 		glBufferData(GL_ARRAY_BUFFER,
 			vs.size() * sizeof(GLfloat),
@@ -61,7 +61,7 @@ public:
 		);
 	}
 
-	void indices(std::vector<GLuint>& is) {
+	void indices(std::vector<GLuint> const& is) {
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_m);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
 			is.size() * sizeof(GLuint),
@@ -78,6 +78,7 @@ public:
 		CallbackSetterFn<CallbackFn<Args ... >>& glfwCallbackSetter,
 		auto const& userFunction
 	) {
+		// WARNING: Assumes all GLFW callback setters have a unique type.
 		static auto uf = userFunction;
 		glfwCallbackSetter(handle_m,
 			[] (GLFWwindow*, Args ... args) {
