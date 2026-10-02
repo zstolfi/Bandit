@@ -20,6 +20,8 @@ struct AppState {
 using AppWindow = Window<AppState>;
 
 void setup(AppWindow& window, AppState& state) {
+	glEnable(GL_DEPTH_TEST);
+
 	window.vertices(state.model.vertices());
 
 	// Keep track of which keys been pressed.
@@ -87,7 +89,7 @@ void renderLoop(AppWindow& window, AppState& state) {
 	// Clear our window's screen.
 	auto const& bg = ColorsBackground[state.solved];
 	glClearColor(bg[0], bg[1], bg[2], 1.0);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Draw our beautiful puzzle.
 	glUseProgram(window.shaderProgram());

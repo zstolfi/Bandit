@@ -25,7 +25,7 @@ public:
 		appState_m = appState;
 		setupErrorLog();
 		setupWindow(title);
-		setupObjects();
+		setupCanvas();
 		setup(*this, appState_m);
 		while (!glfwWindowShouldClose(handle_m)) {
 			renderLoop(*this, appState_m);
@@ -169,7 +169,7 @@ private:
 		return result;
 	}
 
-	void setupObjects() {
+	void setupCanvas() {
 		// Set up shaders.
 		std::string vertexShaderSource = loadSource(vertexShaderPath);
 		std::string fragmentShaderSource = loadSource(fragmentShaderPath);
@@ -219,5 +219,8 @@ private:
 			6 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat))
 		);
 		glEnableVertexAttribArray(1);
+
+		glEnable(GL_DEPTH_TEST);
+
 	}
 };
