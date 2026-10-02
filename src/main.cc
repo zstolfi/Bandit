@@ -21,7 +21,6 @@ using AppWindow = Window<AppState>;
 
 void setup(AppWindow& window, AppState& state) {
 	window.vertices(state.model.vertices());
-	window.indices(state.model.indices());
 
 	// Keep track of which keys been pressed.
 	window.bind(glfwSetKeyCallback,
@@ -92,13 +91,45 @@ void renderLoop(AppWindow& window, AppState& state) {
 
 	// Draw our beautiful puzzle.
 	glUseProgram(window.shaderProgram());
-	glBindVertexArray(window.VAO());
-	glDrawElements(
-		GL_TRIANGLES,
-		state.model.indices().size(),
-		GL_UNSIGNED_INT,
-		{}
+
+	double const fov = 0.2 * TWO_PI;
+	double const f = std::tan(TWO_PI/4 - fov/2);
+	auto const [width, height] = window.size();
+	double const aspect = 1.0 * width / height;
+	double const near = 0.1, far = 100.0;
+	// https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluPerspective.xml
+	Matx4 projection {{
+		f/aspect, 0, 0, 0,
+		0, f, 0, 0,
+		0, 0, (near + far)/(near - far), (2 * near * far)/(near - far),
+		0, 0, -1, 0,
+	}};
+
+	Coord3 const position {0, 0, -3};
+	Matx4 view {{
+		1, 0, 0, position.x(),
+		0, 1, 0, position.y(),
+		0, 0, 1, position.z(),
+		0, 0, 0, 1,
+	}};
+
+	Matx4 model {};
+
+	window.uniform(glUniformMatrix4fv,
+		"projection",
+		1, GL_TRUE, projection.data().data()
 	);
+	window.uniform(glUniformMatrix4fv,
+		"view",
+		1, GL_TRUE, view.data().data()
+	);
+	window.uniform(glUniformMatrix4fv,
+		"model",
+		1, GL_TRUE, model.data().data()
+	);
+
+	glBindVertexArray(window.VAO());
+	glDrawArrays(GL_TRIANGLES, 0, state.model.vertices().size()/6);
 	glBindVertexArray(0);
 
 	// Get ready for the next frame.

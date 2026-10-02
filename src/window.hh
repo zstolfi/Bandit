@@ -8,10 +8,11 @@
 template <class AppState=std::monostate>
 class Window {
 	GLFWwindow* handle_m {};
+	std::array<unsigned, 2> size_m {};
 	AppState appState_m {};
 
 	GLuint shaderProgram_m {};
-	GLuint VBO_m {}, VAO_m {}, EBO_m {};
+	GLuint VBO_m {}, VAO_m {};
 
 public:
 	Window(
@@ -20,9 +21,10 @@ public:
 		void (* renderLoop) (Window<AppState>&, AppState&),
 		AppState appState={}
 	) {
+		size_m = {width, height};
 		appState_m = appState;
 		setupErrorLog();
-		setupWindow(width, height, title);
+		setupWindow(title);
 		setupObjects();
 		setup(*this, appState_m);
 		while (!glfwWindowShouldClose(handle_m)) {
@@ -33,7 +35,6 @@ public:
 	~Window() {
 		glDeleteVertexArrays(1, &VAO_m);
 		glDeleteBuffers(1, &VBO_m);
-		glDeleteBuffers(1, &EBO_m);
 		glDeleteProgram(shaderProgram_m);
 		glfwTerminate();
 	}
@@ -44,15 +45,19 @@ public:
 
 	// Getters
 	GLFWwindow* handle() const { return handle_m; }
+	auto const& size() const { return size_m; }
 	AppState& appState() /* */ { return appState_m; }
 	AppState& appState() const { return appState_m; }
 
 	GLuint shaderProgram() const { return shaderProgram_m; };
 	GLuint VBO() const { return VBO_m; };
 	GLuint VAO() const { return VAO_m; };
-	GLuint EBO() const { return EBO_m; };
 
 	// Setters
+	void size(auto const& val) {
+		glfwSetWindowSize(handle_m, std::get<0>(val), std::get<1>(val));
+	}
+
 	void vertices(std::vector<GLfloat> const& vs) {
 		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
 		glBufferData(GL_ARRAY_BUFFER,
@@ -61,12 +66,9 @@ public:
 		);
 	}
 
-	void indices(std::vector<GLuint> const& is) {
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_m);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-			is.size() * sizeof(GLuint),
-			is.data(), GL_STATIC_DRAW
-		);
+	template <class ... Args>
+	void uniform(auto& setter, std::string const& name, Args const& ... args) {
+		setter(glGetUniformLocation(shaderProgram_m, name.c_str()), args ... );
 	}
 
 	// GLFW specific
@@ -94,7 +96,7 @@ private:
 		});
 	}
 
-	void setupWindow(unsigned width, unsigned height, std::string title) {
+	void setupWindow(std::string const& title) {
 		// Initialize with the correct OpenGL versioning.
 		if (!glfwInit()) exit("glfwInit: Unable to start GLFW.\n");
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -105,7 +107,12 @@ private:
 #		endif
 
 		// Create our window, keeping track of its handle.
-		handle_m = glfwCreateWindow(width, height, title.c_str(), {}, {});
+		handle_m = glfwCreateWindow(
+			size_m[0], size_m[1],
+			title.c_str(),
+			{}, // no monitor
+			{} // no resource sharing
+		);
 		if (!handle_m) exit("glfwCreateWindow: Unable to create window.\n");
 		glfwMakeContextCurrent(handle_m);
 
@@ -115,9 +122,10 @@ private:
 		}
 
 		// Set our width and height, and respond when a user resizes.
-		glViewport(0, 0, width, height);
+		glViewport(0, 0, size_m[0], size_m[1]);
 		bind(glfwSetFramebufferSizeCallback,
-			[&] (int newWidth, int newHeight) {
+			[&] (unsigned newWidth, unsigned newHeight) {
+				size_m = {newWidth, newHeight};
 				glViewport(0, 0, newWidth, newHeight);
 			}
 		);
@@ -191,14 +199,12 @@ private:
 		glDeleteShader(vertexShader);
 		glDeleteShader(fragmentShader);
 
-		// Set up geometry objects.
+		// Generate geometry objects.
 		glGenVertexArrays(1, &VAO_m);
 		glGenBuffers(1, &VBO_m);
-		glGenBuffers(1, &EBO_m);
 
 		glBindVertexArray(VAO_m);
 		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_m);
 
 		// Define position attribute.
 		glVertexAttribPointer(

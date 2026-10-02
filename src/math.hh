@@ -1,6 +1,8 @@
 #pragma once
 #include "util.hh"
 
+double constexpr TWO_PI = 6.2831853071795864769;
+
 /* ~~ Linear Algebra ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 // for 3D graphics
 
@@ -45,7 +47,6 @@ public:
 	friend Coord3 operator/(Coord3 lhs, Scalar rhs);
 
 	// Unified read/write syntax. One name is overloaded for both actions.
-	// Properties have this feature as when they're able.
 	[[nodiscard]] Scalar x() const;
 	void x(Scalar);
 
@@ -122,9 +123,32 @@ private:
 	void normalize();
 };
 
+/* ~~ Matrices ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+class Matx4 {
+	std::array<float, 16> elements_m;
+
+public:
+	Matx4(): elements_m {{
+		1.0, 0.0, 0.0, 0.0,
+		0.0, 1.0, 0.0, 0.0,
+		0.0, 0.0, 1.0, 0.0,
+		0.0, 0.0, 0.0, 1.0,
+	}} {}
+
+	Matx4(std::array<float, 16> const& elements)
+	:	elements_m{elements} {}
+
+	auto operator[](unsigned i, unsigned j) const {
+		return elements_m[4*i + j];
+	}
+
+	auto const& data() { return elements_m; };
+};
+
 /* ~~ Relational Properties ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-// Regular parameters enable the syntax of the following example:
+// Regular parameters enable the syntax style:
 //	Location home, work;
 //	std::cout << home.address();
 //	std::cout << work.address();
