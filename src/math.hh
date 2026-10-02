@@ -143,6 +143,14 @@ public:
 		return elements_m[4*i + j];
 	}
 
+	Matx4& operator*=(Matx4 const& other) { return *this = *this * other; }
+
+	friend Matx4 operator*(Matx4 const&, Matx4 const&);
+
+	static Matx4 RotateX(float);
+	static Matx4 RotateY(float);
+	static Matx4 RotateZ(float);
+
 	auto const& data() { return elements_m; };
 };
 

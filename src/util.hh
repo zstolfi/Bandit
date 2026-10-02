@@ -8,6 +8,7 @@
 #include <fstream>
 #include <functional>
 #include <map>
+#include <optional>
 #include <print>
 #include <ranges>
 #include <set>

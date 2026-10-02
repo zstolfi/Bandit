@@ -143,6 +143,54 @@ void Plane3::normalize() {
 	};
 }
 
+/* ~~ Matrices ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+Matx4 operator*(Matx4 const& lhs, Matx4 const& rhs) {
+	Matx4 result {};
+	for (unsigned i=0; i<4; i++)
+	for (unsigned j=0; j<4; j++) {
+		auto& element = result.elements_m[4*i + j];
+		element = 0;
+		for (unsigned k=0; k<4; k++) {
+			element += lhs[i, k] * rhs[k, j];
+		}
+	}
+	return result;
+}
+
+Matx4 Matx4::RotateX(float angle) {
+	float const cos = std::cos(angle);
+	float const sin = std::sin(angle);
+	return Matx4 {{
+		1.0,   0.0,  0.0,  0.0,
+		0.0,   cos, -sin,  0.0,
+		0.0,   sin,  cos,  0.0,
+		0.0,   0.0,  0.0,  1.0,
+	}};
+}
+
+Matx4 Matx4::RotateY(float angle) {
+	float const cos = std::cos(angle);
+	float const sin = std::sin(angle);
+	return Matx4 {{
+		 cos,  0.0,  sin,  0.0,
+		 0.0,  1.0,  0.0,  0.0,
+		-sin,  0.0,  cos,  0.0,
+		 0.0,  0.0,  0.0,  1.0,
+	}};
+}
+
+Matx4 Matx4::RotateZ(float angle) {
+	float const cos = std::cos(angle);
+	float const sin = std::sin(angle);
+	return Matx4 {{
+		 cos, -sin,  0.0,  0.0,
+		 sin,  cos,  0.0,  0.0,
+		 0.0,  0.0,  1.0,  0.0,
+		 0.0,  0.0,  0.0,  1.0,
+	}};
+}
+
 /* ~~ Relational Properties ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 template <>

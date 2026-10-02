@@ -20,8 +20,6 @@ struct AppState {
 using AppWindow = Window<AppState>;
 
 void setup(AppWindow& window, AppState& state) {
-	glEnable(GL_DEPTH_TEST);
-
 	window.vertices(state.model.vertices());
 
 	// Keep track of which keys been pressed.
@@ -94,7 +92,7 @@ void renderLoop(AppWindow& window, AppState& state) {
 	// Draw our beautiful puzzle.
 	glUseProgram(window.shaderProgram());
 
-	double const fov = 0.2 * TWO_PI;
+	double const fov = 0.1 * TWO_PI;
 	double const f = std::tan(TWO_PI/4 - fov/2);
 	auto const [width, height] = window.size();
 	double const aspect = 1.0 * width / height;
@@ -107,13 +105,20 @@ void renderLoop(AppWindow& window, AppState& state) {
 		0, 0, -1, 0,
 	}};
 
-	Coord3 const position {0, 0, -3};
+	Coord3 const position {0, 0, -5};
 	Matx4 view {{
 		1, 0, 0, position.x(),
 		0, 1, 0, position.y(),
 		0, 0, 1, position.z(),
 		0, 0, 0, 1,
 	}};
+
+	if (auto const& mouse = window.mouse()) {
+		float const panX = 1.0 * (*mouse)[0] / window.size()[0] - 0.5;
+		float const panY = 1.0 * (*mouse)[1] / window.size()[1] - 0.5;
+		view *= Matx4::RotateX(-4.0 * panY);
+		view *= Matx4::RotateY( 6.0 * panX);
+	}
 
 	Matx4 model {};
 

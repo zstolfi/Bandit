@@ -9,16 +9,20 @@ template <class AppState=std::monostate>
 class Window {
 	GLFWwindow* handle_m {};
 	std::array<unsigned, 2> size_m {};
+	std::optional<std::array<unsigned, 2>> mouse_m;
 	AppState appState_m {};
 
 	GLuint shaderProgram_m {};
 	GLuint VBO_m {}, VAO_m {};
 
 public:
+	using AppFn = void (Window<AppState>&, AppState&);
+
 	Window(
-		unsigned width, unsigned height, std::string title,
-		void (* setup     ) (Window<AppState>&, AppState&),
-		void (* renderLoop) (Window<AppState>&, AppState&),
+		unsigned width, unsigned height,
+		std::string title,
+		AppFn* setup,
+		AppFn* renderLoop,
 		AppState appState={}
 	) {
 		size_m = {width, height};
@@ -46,6 +50,7 @@ public:
 	// Getters
 	GLFWwindow* handle() const { return handle_m; }
 	auto const& size() const { return size_m; }
+	auto const& mouse() const { return mouse_m; }
 	AppState& appState() /* */ { return appState_m; }
 	AppState& appState() const { return appState_m; }
 
@@ -127,6 +132,22 @@ private:
 			[&] (unsigned newWidth, unsigned newHeight) {
 				size_m = {newWidth, newHeight};
 				glViewport(0, 0, newWidth, newHeight);
+			}
+		);
+
+		// Keep track of mouse input, when it's available.
+		bind(glfwSetCursorPosCallback,
+			[&] (unsigned mouseX, unsigned mouseY) {
+				if (!mouse_m) mouse_m = {0, 0};
+				(*mouse_m)[0] = mouseX;
+				(*mouse_m)[1] = size_m[1] - mouseY;
+			}
+		);
+
+		// Otherwise report no position.
+		bind(glfwSetCursorEnterCallback,
+			[&] (bool entered) {
+				if (!entered) mouse_m = std::nullopt;
 			}
 		);
 	}
