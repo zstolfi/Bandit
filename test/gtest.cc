@@ -11,9 +11,11 @@
 TEST(BanditVector, CompiletimeProperties) {
 	EXPECT_EQ(Vect3::Dimensions, 3);
 	EXPECT_CONCEPT(std::convertible_to, Vect3::ScalarType, double);
+	EXPECT_CONCEPT(IsRangeOf, Vect3::DataType, Vect3::ScalarType);
 }
 
 TEST(BanditCoordinate, CompiletimeProperties) {
+	EXPECT_CONCEPT(std::regular, Coord3);
 	EXPECT_CONCEPT(std::derived_from, Coord3, Vect3);
 	EXPECT_EQ(Coord3::Dimensions, 3);
 	EXPECT_CONCEPT(std::convertible_to, Coord3::ScalarType, double);
@@ -30,8 +32,8 @@ TEST(BanditCoordinate, EmptyConstruction) {
 
 TEST(BanditCoordinate, Construction) {
 	Coord3 c {1, 2, 3};
-	using D = decltype(c.data());
-	EXPECT_EQ(c.data(),(D {1, 2, 3}));
+	using D = Coord3::DataType;
+	EXPECT_EQ(c.data(), (D {1, 2, 3}));
 }
 
 TEST(BanditCoordinate, Position) {
@@ -41,13 +43,70 @@ TEST(BanditCoordinate, Position) {
 	EXPECT_EQ(c.y(), -2);
 	EXPECT_EQ(c.z(), -3);
 
-	using D = decltype(c.data());
+	using D = Coord3::DataType;
 	c.x(1);
-	EXPECT_EQ(c.data(),(D { 1, -2, -3}));
+	EXPECT_EQ(c.data(), (D { 1, -2, -3}));
 	c.y(2);
-	EXPECT_EQ(c.data(),(D { 1,  2, -3}));
+	EXPECT_EQ(c.data(), (D { 1,  2, -3}));
 	c.z(3);
-	EXPECT_EQ(c.data(),(D { 1,  2,  3}));
+	EXPECT_EQ(c.data(), (D { 1,  2,  3}));
+}
+
+TEST(BanditCoordinate, UnaryPlus) {
+	Coord3 c {1, 2, 3};
+
+	using D = Coord3::DataType;
+	EXPECT_EQ((+c).data(), (D {1, 2, 3}));
+	EXPECT_EQ(c.data(), (D {1, 2, 3}));
+	c = +c;
+	EXPECT_EQ(c.data(), (D {1, 2, 3}));
+}
+
+TEST(BanditCoordinate, UnaryMinus) {
+	Coord3 c {1, 2, 3};
+
+	using D = Coord3::DataType;
+	EXPECT_EQ((-c).data(), (D {-1, -2, -3}));
+	EXPECT_EQ(c.data(), (D {1, 2, 3}));
+	c = -c;
+	EXPECT_EQ(c.data(), (D {-1, -2, -3}));
+}
+
+TEST(BanditCoordinate, CoordinateAddition) {
+	Coord3 a {1, 2, 3}, b {8, 7, 6};
+
+	using D = Coord3::DataType;
+	EXPECT_EQ((a + b).data(), (D {9, 9, 9}));
+	a += a;
+	EXPECT_EQ(a.data(), (D {2, 4, 6}));
+}
+
+TEST(BanditCoordinate, CoordinateSubtraction) {
+	Coord3 a {1, 2, 3}, b {8, 7, 6};
+
+	using D = Coord3::DataType;
+	EXPECT_EQ((a - b).data(), (D {-7, -5, -3}));
+	a -= a;
+	EXPECT_EQ(a.data(), (D {0, 0, 0}));
+}
+
+TEST(BanditCoordinate, ScalarMultiplication) {
+	Coord3 c {2, 5, 1};
+
+	using D = Coord3::DataType;
+	EXPECT_EQ((2 * c).data(), (D {4, 10, 2}));
+	EXPECT_EQ((c * 3).data(), (D {6, 15, 3}));
+	c *= 1.5;
+	EXPECT_EQ(c.data(), (D {3, 7.5, 1.5}));
+}
+
+TEST(BanditCoordinate, ScalarDivision) {
+	Coord3 c {3, 6, 9};
+
+	using D = Coord3::DataType;
+	EXPECT_EQ((c / 2).data(), (D {1.5, 3, 4.5}));
+	c /= 3;
+	EXPECT_EQ(c.data(), (D {1, 2, 3}));
 }
 
 TEST(BanditCoordinate, Distance) {
@@ -94,11 +153,58 @@ TEST(BanditCoordinate, Distance) {
 }
 
 TEST(BanditCoordinatePair, Distance) {
-	Coord3 me {3, 6, 9};
-	Coord3 you {-2, -5, -1};
+	Coord3 me {0, 0, 0};
+	Coord3 you {0, 0, 0};
+	EXPECT_EQ((me, you).distance(), 0);
+	EXPECT_EQ((me, you).distance2(), 0);
 
+	Coord3::ScalarType n = 1'000'000;
+	me = {n, n, n};
+	you = {n, n, n};
+	EXPECT_EQ((me, you).distance(), 0);
+	EXPECT_EQ((me, you).distance2(), 0);
+
+	me = {2, 2, 2};
+	you = {-1, -1, -1};
+	EXPECT_EQ((me, you).distance(), std::sqrt(27));
+	EXPECT_EQ((me, you).distance2(), 27);
+
+	me = {3, 6, 9};
+	you = {-2, -5, -1};
+	EXPECT_EQ((me, you).distance(), std::sqrt(246));
 	EXPECT_EQ((me, you).distance2(), 246);
 }
+
+TEST(BanditCoordinatePair, DotProduct) {
+	Coord3 a {0, 0, 0};
+	Coord3 b {0, 0, 0};
+	EXPECT_EQ((a, b).dot(), 0);
+
+	a = {0, 0, 1};
+	b = {1, 0, 0};
+	EXPECT_EQ((a, b).dot(), 0);
+
+	a = {1, 0, 0};
+	b = {0, -1, -1};
+	EXPECT_EQ((a, b).dot(), 0);
+
+	a = {1, 2, 3};
+	b = {-3, -2, -1};
+	EXPECT_EQ((a, b).dot(), -10);
+
+	a = {8, 6, 7};
+	b = {3, 0, 9};
+	EXPECT_EQ((a, b).dot(), 87);
+}
+
+/* ~~ 3D Normalized Coordinates ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+TEST(BanditNormal, CompiletimeProperties) {
+	EXPECT_CONCEPT(std::derived_from, Norm3, Vect3);
+	EXPECT_EQ(Norm3::Dimensions, 3);
+	EXPECT_CONCEPT(std::convertible_to, Norm3::ScalarType, double);
+}
+
 
 /* ~~ Permutations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 

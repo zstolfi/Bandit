@@ -14,6 +14,15 @@ namespace {
 	}
 }
 
+// Operators
+Coord3 Coord3::operator+() const {
+	return {+elements_m[0], +elements_m[1], +elements_m[2]};
+}
+
+Coord3 Coord3::operator-() const {
+	return {-elements_m[0], -elements_m[1], -elements_m[2]};
+}
+
 Coord3& Coord3::operator+=(Coord3 const& other) {
 	apply3(std::plus {}, this->elements_m, other.elements_m);
 	return *this;
@@ -194,11 +203,20 @@ Matx4 Matx4::RotateZ(float angle) {
 /* ~~ Relational Properties ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 template <>
+Coord3::Scalar RegularParameters<Coord3, Coord3>::dot() const {
+	return get<0>().x() * get<1>().x()
+	+      get<0>().y() * get<1>().y()
+	+      get<0>().z() * get<1>().z();
+}
+
+template <>
+Coord3::Scalar RegularParameters<Coord3, Coord3>::distance() const {
+	return (get<0>() - get<1>()).distance();
+}
+
+template <>
 Coord3::Scalar RegularParameters<Coord3, Coord3>::distance2() const {
-	Coord3 diff = get<0>() - get<1>();
-	return diff.x() * diff.x()
-	+      diff.y() * diff.y()
-	+      diff.z() * diff.z();
+	return (get<0>() - get<1>()).distance2();
 }
 
 RegularParameters<Coord3, Coord3> operator,(Coord3 a, Coord3 b) {

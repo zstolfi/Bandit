@@ -22,6 +22,7 @@ protected:
 
 public:
 	using ScalarType = Scalar;
+	using DataType = decltype(elements_m);
 	static unsigned constexpr Dimensions = 3;
 	auto operator<=>(Vect3 const&) const = default;
 	auto const& data() { return elements_m; };
@@ -33,6 +34,9 @@ public:
 	Coord3(Scalar x, Scalar y, Scalar z): Vect3{x, y, z} { normalize(); }
 
 	// Operators
+	Coord3 operator+() const;
+	Coord3 operator-() const;
+
 	Coord3& operator+=(Coord3 const&);
 	friend Coord3 operator+(Coord3 lhs, Coord3 const& rhs);
 
@@ -172,8 +176,9 @@ class RegularParameters: std::tuple<Args ... > {
 public:
 	RegularParameters(Args const& ... args): std::tuple<Args ... >{args ... } {}
 
-	Coord3::Scalar distance() const requires(Arguments<Coord3, Coord3>);
-	Coord3::Scalar distance2() const requires(Arguments<Coord3, Coord3>);
+	Coord3::Scalar dot() const requires Arguments<Coord3, Coord3>;
+	Coord3::Scalar distance() const requires Arguments<Coord3, Coord3>;
+	Coord3::Scalar distance2() const requires Arguments<Coord3, Coord3>;
 
 private:
 	template <auto I>
