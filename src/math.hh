@@ -59,7 +59,7 @@ private:
 	// Keep track of internal properties here.
 	using enum VectorKind;
 	bool static constexpr IsData {Kind == Data};
-	bool static constexpr IsCoordinate {Kind == Coordinate || Kind == Normal};
+	bool static constexpr IsCoordinate {Kind == Coordinate};
 	bool static constexpr IsNormal {Kind == Normal};
 	bool static constexpr IsColor {Kind == Color};
 
@@ -105,10 +105,10 @@ public:
  	{ elements_m[Index] = f(elements_m[Index]); normalize(); }
 
 	// Coordinate/Normal
-	DefineElementProperty(x, 0, IsCoordinate && Dimension > 0);
-	DefineElementProperty(y, 1, IsCoordinate && Dimension > 1);
-	DefineElementProperty(z, 2, IsCoordinate && Dimension > 2);
-	DefineElementProperty(w, 3, IsCoordinate && Dimension > 3);
+	DefineElementProperty(x, 0, (IsCoordinate || IsNormal) && Dimension > 0);
+	DefineElementProperty(y, 1, (IsCoordinate || IsNormal) && Dimension > 1);
+	DefineElementProperty(z, 2, (IsCoordinate || IsNormal) && Dimension > 2);
+	DefineElementProperty(w, 3, (IsCoordinate || IsNormal) && Dimension > 3);
 
 	// Color
 	DefineElementProperty(r, 0, IsColor && Dimension > 0);
@@ -125,7 +125,7 @@ public:
 	{ return *((Relative<Data>*)this); }
 
 	// Coordinates are allowed to downcast to Normals
-	operator Relative<Normal>() const requires (IsCoordinate && !IsNormal)
+	operator Relative<Normal>() const requires (IsCoordinate)
 	{ return Relative<Normal> {data()}; }
 
 	// ... and Normals are allowed to upcast to Coordinates.
@@ -133,15 +133,73 @@ public:
 	{ return Relative<Coordinate> {data()}; }
 
 	// Operators //
+	Vector operator+() const requires (!IsData) {
+		Vector result = *this;
+		for (Scalar& e: result.elements_m) e = +e;
+		result.normalize();
+		return result;
+	}
+
+	Vector operator-() const requires (!IsData) {
+		Vector result = *this;
+		for (Scalar& e: result.elements_m) e = -e;
+		result.normalize();
+		return result;
+	}
+
+	Vector const& operator+=(Vector const& other) requires (!IsData) {
+		for (auto& [left, right]: stdv::zip(elements_m, other.elements_m)) {
+			left += right;
+		}
+		normalize();
+		return *this;
+	}
+
+	Vector const& operator-=(Vector const& other) requires (!IsData) {
+		for (auto& [left, right]: stdv::zip(elements_m, other.elements_m)) {
+			left -= right;
+		}
+		normalize();
+		return *this;
+	}
+
+	Vector const& operator*=(Scalar const& value) requires (!IsData) {
+		for (Scalar& e: elements_m) e *= value;
+		normalize();
+		return *this;
+	}
+
+	Vector const& operator/=(Scalar const& value) requires (!IsData) {
+		if (value != 0) {
+			for (Scalar& e: elements_m) e /= value;
+		}
+		normalize();
+		return *this;
+	}
+
+	friend Vector operator+(Vector left, Vector const& right)
+	requires (!IsData) { return left += right; }
+
+	friend Vector operator-(Vector left, Vector const& right)
+	requires (!IsData) { return left -= right; }
+
+	friend Vector operator*(Vector left, Scalar const& right)
+	requires (!IsData) { return left *= right; }
+
+	friend Vector operator*(Scalar const& left, Vector right)
+	requires (!IsData) { return right *= left; }
+
+	friend Vector operator/(Vector left, Scalar const& right)
+	requires (!IsData) { return left /= right; }
 
 	// Properties //
 
 	[[nodiscard]]
-	Scalar length() const requires (IsCoordinate && !IsNormal) {
+	Scalar length() const requires (IsCoordinate) {
 		return std::sqrt(length2());
 	}
 
-	void length(Scalar const& value) requires (IsCoordinate && !IsNormal) {
+	void length(Scalar const& value) requires (IsCoordinate) {
 		if (length() != 0) {
 			Scalar ratio {value / length()};
 			for (Scalar& e: elements_m) e *= ratio;
@@ -149,17 +207,17 @@ public:
 		else fill([&] (unsigned i) { return i==0? value: 0; });
 	}
 
-	void length(BecomesMultiplied m) requires (IsCoordinate && !IsNormal) {
+	void length(BecomesMultiplied m) requires (IsCoordinate) {
 		for (Scalar& e: elements_m) e *= m.operand;
 	}
 
-	void length(BecomesDivided d) requires (IsCoordinate && !IsNormal) {
+	void length(BecomesDivided d) requires (IsCoordinate) {
 		if (d.operand != 0) {
 			for (Scalar& e: elements_m) e /= d.operand;
 		}
 	}
 
-	void length(UnaryFn f) requires (IsCoordinate && !IsNormal)
+	void length(UnaryFn f) requires (IsCoordinate)
 	{ length(f(length())); }
 
 	[[nodiscard]]
@@ -168,23 +226,38 @@ public:
 	}
 
 	[[nodiscard]]
-	Scalar length2() const requires (IsCoordinate && !IsNormal) {
+	Scalar length2() const requires (IsCoordinate) {
 		Scalar result {0};
 		for (Scalar const& e: elements_m) result += e * e;
 		return result;
 	}
 
-	void length2(Scalar const& value) requires (IsCoordinate && !IsNormal) {
+	void length2(Scalar const& value) requires (IsCoordinate) {
 		length(std::sqrt(value));
 	}
 
-	void length2(UnaryFn f) requires (IsCoordinate && !IsNormal) {
+	void length2(UnaryFn f) requires (IsCoordinate) {
 		length2(f(length2()));
 	}
 
 	[[nodiscard]]
 	Scalar length2() const requires (IsNormal) {
 		return 1;
+	}
+
+	[[nodiscard]]
+	Relative<Normal> direction() const requires (IsCoordinate) {
+		return Relative<Normal> {*this};
+	}
+
+	void direction(Relative<Normal> normal) requires (IsCoordinate) {
+		Scalar len = length();
+		for (Scalar& e: normal.elements_m) e *= len;
+		*this = normal;
+	}
+
+	void direction(UnaryFn f) requires (IsCoordinate) {
+		direction(f(direction()));
 	}
 
 private:
