@@ -248,9 +248,7 @@ public:
 
 	[[nodiscard]]
 	Scalar length2() const requires (IsCoordinate) {
-		Scalar result {0};
-		for (Scalar const& e: elements_m) result += e * e;
-		return result;
+		return (*this, *this).dot();
 	}
 
 	void length2(Scalar const& value) requires (IsCoordinate) {
