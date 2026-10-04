@@ -363,10 +363,9 @@ class RegularParameters: std::tuple<Args ... > {
 
 	// Determine What types of argument tuples to support properties for.
 	template <VectorKind ... Ks>
-	bool static constexpr VectorPair {
+	bool static constexpr IsVectorPairOf {
 		sizeof ... (Args) == 2 &&
-		Get<0>::Dimension == Get<1>::Dimension &&
-		Get<0>::Kind == Get<1>::Kind &&
+		std::same_as<Get<0>, Get<1>> &&
 		((Get<0>::Kind == Ks) || ... )
 	};
 
@@ -374,22 +373,20 @@ class RegularParameters: std::tuple<Args ... > {
 public:
 	RegularParameters(Args const& ... args): Tuple {args ... } {}
 
-	auto dot() const requires VectorPair<Coordinate> {
+	auto dot() const requires IsVectorPairOf<Coordinate> {
 		typename Get<0>::Scalar result {};
-		/* ... */
+		for (unsigned i=0; i<Get<0>::Dimension; i++) {
+			result += get<0>().data()[i] * get<1>().data()[i];
+		}
 		return result;
 	}
 
-	auto distance() const requires VectorPair<Coordinate> {
-		typename Get<0>::Scalar result {};
-		/* ... */
-		return result;
+	auto distance() const requires IsVectorPairOf<Coordinate> {
+		return std::sqrt(distance2());
 	}
 
-	auto distance2() const requires VectorPair<Coordinate> {
-		typename Get<0>::Scalar result {};
-		/* ... */
-		return result;
+	auto distance2() const requires IsVectorPairOf<Coordinate> {
+		return (get<0>() - get<1>()).length2();
 	}
 
 private:
