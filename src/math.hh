@@ -3,159 +3,165 @@
 
 double constexpr TWO_PI = 6.2831853071795864769;
 
+struct BecomesAdded {
+	double operand {0};
+	double operator()(double value) { return value + operand; }
+};
+
+struct BecomesSubtracted {
+	double operand {0};
+	double operator()(double value) { return value - operand; }
+};
+
+struct BecomesMultiplied {
+	double operand {1};
+	double operator()(double value) { return value * operand; }
+};
+
+struct BecomesDivided {
+	double operand {1};
+	double operator()(double value) { return value / operand; }
+};
+
+struct Becomes_Arg {} static constexpr Becomes {};
+auto operator+=(Becomes_Arg, double n) { return BecomesAdded {n}; }
+auto operator-=(Becomes_Arg, double n) { return BecomesSubtracted {n}; }
+auto operator*=(Becomes_Arg, double n) { return BecomesMultiplied {n}; }
+auto operator/=(Becomes_Arg, double n) { return BecomesDivided {n}; }
+
 /* ~~ Linear Algebra ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 // for 3D graphics
 
-class Vect3 {
-protected:
-	template <class ... >
-	friend struct RegularParameters;
+template <class>
+concept IsScalar = true; // TODO
 
-	using Scalar = double;
-	std::array<Scalar, 3> elements_m {};
-
-	Vect3() = default;
-	Vect3(auto ... args): elements_m{Scalar(args) ... } {}
-	virtual ~Vect3() = default;
-
-	virtual void normalize() {/* Do nothing. */}
-
-public:
-	using ScalarType = Scalar;
-	using DataType = decltype(elements_m);
-	static unsigned constexpr Dimensions = 3;
-	auto operator<=>(Vect3 const&) const = default;
-	auto const& data() { return elements_m; };
+enum struct VectorKind {
+	Data, // [0] [1] [2] ...
+	Coordinate, Normal, // X, Y, Z, W
+	Color, // R, G, B, A
 };
 
-class Coord3: public Vect3 {
+template <
+	unsigned Dimension_p,
+	VectorKind Kind_p,
+	IsScalar Scalar_p=double
+>
+class Vector {
 public:
-	Coord3(): Vect3{0, 0, 0} { normalize(); }
-	Coord3(Scalar x, Scalar y, Scalar z): Vect3{x, y, z} { normalize(); }
-
-	// Operators
-	Coord3 operator+() const;
-	Coord3 operator-() const;
-
-	Coord3& operator+=(Coord3 const&);
-	friend Coord3 operator+(Coord3 lhs, Coord3 const& rhs);
-
-	Coord3& operator-=(Coord3 const&);
-	friend Coord3 operator-(Coord3 lhs, Coord3 const& rhs);
-
-	Coord3& operator*=(Scalar);
-	friend Coord3 operator*(Coord3 lhs, Scalar rhs);
-	friend Coord3 operator*(Scalar lhs, Coord3 rhs);
-
-	Coord3& operator/=(Scalar);
-	friend Coord3 operator/(Coord3 lhs, Scalar rhs);
-
-	// Unified read/write syntax. One name is overloaded for both actions.
-	[[nodiscard]] Scalar x() const;
-	void x(Scalar);
-
-	[[nodiscard]] Scalar y() const;
-	void y(Scalar);
-
-	[[nodiscard]] Scalar z() const;
-	void z(Scalar);
-
-	// On its own, "distance" is a measurement from the origin.
-	[[nodiscard]] Scalar distance() const;
-	void distance(Scalar);
-
-	// You can also measure distance squared, for more efficient computation.
-	[[nodiscard]] Scalar distance2() const;
-	void distance2(Scalar);
-};
-
-class Norm3: public Coord3 {
-public:
-	Norm3(): Coord3{1, 0, 0} {}
-	using Coord3::Coord3;
+	// Our template parameters are no secret.
+	unsigned static constexpr Dimension	{Dimension_p};
+	VectorKind static constexpr Kind {Kind_p};
+	using Scalar = Scalar_p;
 
 private:
-	void normalize() override;
-};
+	std::array<Scalar, Dimension> elements_m {};
 
-class Ray3 {
-	Coord3 origin_m {};
-	Norm3 direction_m {};
-
-public:
-	Ray3() {}
-	Ray3(Coord3 origin, Norm3 direction)
-	:	origin_m{origin}
-	,	direction_m{direction} {}
-
-	auto operator<=>(Ray3 const&) const = default;
-
-	// Properties
-	[[nodiscard]] Coord3 const& origin() const;
-	void origin(Coord3);
-
-	[[nodiscard]] Norm3 const& direction() const;
-	void direction(Norm3);
-};
-
-class Plane3 {
-	Coord3 origin_m {};
-	Norm3 direction_m {};
+	using enum VectorKind;
+	bool static constexpr IsData {Kind == Data};
+	bool static constexpr IsCoordinate {Kind == Coordinate || Kind == Normal};
+	bool static constexpr IsColor {Kind == Color};
+	using UnaryFn = std::function<Scalar (Scalar)>;
 
 public:
-	Plane3() {}
-	Plane3(Coord3 origin, Norm3 direction)
-	:	origin_m{origin}
-	,	direction_m{direction} {}
-	Plane3(Ray3 const& r)
-	:	origin_m{r.origin()}
-	,	direction_m{r.direction()} {}
+	auto operator<=>(Vector const&) const = default;
 
-	auto operator<=>(Plane3 const&) const = default;
+	Vector() { stdr::fill(elements_m, 0); }
+
+	Vector(auto const& ... elements): elements_m{Scalar(elements) ... } {}
+
+	// Data elements
+	[[nodiscard]]
+	Scalar const& operator[](unsigned i) const requires (IsData)
+	{ return elements_m[i]; }
+
+	Scalar& operator[](unsigned i) requires (IsData)
+	{ return elements_m[i]; }
+
+	[[nodiscard]]
+	Scalar const& x() const requires (IsCoordinate && Dimension >= 1)
+	{ return elements_m[0]; }
+
+	// Coordinate elements
+	void x(Scalar const& value) requires (IsCoordinate && Dimension >= 1)
+	{ elements_m[0] = value; }
+
+	void x(UnaryFn f) requires (IsCoordinate && Dimension >= 1)
+	{ elements_m[0] = f(elements_m[0]); }
+
+	[[nodiscard]]
+	Scalar const& y() const requires (IsCoordinate && Dimension >= 2)
+	{ return elements_m[1]; }
+
+	void y(Scalar const& value) requires (IsCoordinate && Dimension >= 2)
+	{ elements_m[1] = value; }
+
+	void y(UnaryFn f) requires (IsCoordinate && Dimension >= 2)
+	{ elements_m[1] = f(elements_m[1]); }
+
+	[[nodiscard]]
+	Scalar const& z() const requires (IsCoordinate && Dimension >= 3)
+	{ return elements_m[2]; }
+
+	void z(Scalar const& value) requires (IsCoordinate && Dimension >= 3)
+	{ elements_m[2] = value; }
+
+	void z(UnaryFn f) requires (IsCoordinate && Dimension >= 3)
+	{ elements_m[2] = f(elements_m[2]); }
 
 	// Properties
-	[[nodiscard]] Coord3 const& origin() const;
-	void origin(Coord3 c);
+	[[nodiscard]]
+	Scalar length() const requires (IsCoordinate) {
+		Scalar result {0};
+		for (unsigned i=0; i<Dimension; i++) {
+			result += elements_m[i] * elements_m[i];
+		}
+		result = std::sqrt(result);
+		return result;
+	}
 
-	[[nodiscard]] Norm3 const& direction() const;
-	void direction(Norm3 n);
+	void length(Scalar const& value) requires (IsCoordinate) {
+		Scalar ratio {value / length()};
+		for (unsigned i=0; i<Dimension; i++) {
+			elements_m[i] *= ratio;
+		}
+	}
 
-//	// Properties
-//	Scalar length();
+	void length(BecomesMultiplied m) requires (IsCoordinate) {
+		std::print("Clever square root avoidance!\n");
+		for (unsigned i=0; i<Dimension; i++) {
+			elements_m[i] *= m.operand;
+		}
+	}
 
-private:
-	void normalize();
+	void length(UnaryFn f) requires (IsCoordinate)
+	{ length(f(length())); }
 };
+
+using Coord3 = Vector<3, VectorKind::Coordinate>;
+using Norm3 = Vector<3, VectorKind::Normal>;
+using Color = Vector<3, VectorKind::Color>;
 
 /* ~~ Matrices ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-class Matx4 {
-	std::array<float, 16> elements_m;
+enum struct MatrixKind {
+	Data,
+	Transformation, Rotation
+};
+
+template <
+	unsigned DimensionI,
+	unsigned DimensionJ,
+	MatrixKind Kind,
+	IsScalar Scalar=double
+>
+class Matrix {
+	std::array<Scalar, DimensionI * DimensionJ> elements_m;
 
 public:
-	Matx4(): elements_m {{
-		1.0, 0.0, 0.0, 0.0,
-		0.0, 1.0, 0.0, 0.0,
-		0.0, 0.0, 1.0, 0.0,
-		0.0, 0.0, 0.0, 1.0,
-	}} {}
+	Matrix();
+	auto operator<=>(Matrix const&) const = default;
 
-	Matx4(std::array<float, 16> const& elements)
-	:	elements_m{elements} {}
-
-	auto operator[](unsigned i, unsigned j) const {
-		return elements_m[4*i + j];
-	}
-
-	Matx4& operator*=(Matx4 const& other) { return *this = *this * other; }
-
-	friend Matx4 operator*(Matx4 const&, Matx4 const&);
-
-	static Matx4 RotateX(float);
-	static Matx4 RotateY(float);
-	static Matx4 RotateZ(float);
-
-	auto const& data() { return elements_m; };
+	/* ... */
 };
 
 /* ~~ Relational Properties ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
