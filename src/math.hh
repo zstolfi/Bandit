@@ -6,25 +6,25 @@ double constexpr TWO_PI = 6.2831853071795864769;
 template <class T>
 struct BecomesAdded {
 	T operand {0};
-	T operator()(T value) { return value + operand; }
+	auto operator()(auto value) { return value + operand; }
 };
 
 template <class T>
 struct BecomesSubtracted {
 	T operand {0};
-	T operator()(T value) { return value - operand; }
+	auto operator()(auto value) { return value - operand; }
 };
 
 template <class T>
 struct BecomesMultiplied {
 	T operand {1};
-	T operator()(T value) { return value * operand; }
+	auto operator()(auto value) { return value * operand; }
 };
 
 template <class T>
 struct BecomesDivided {
 	T operand {1};
-	T operator()(T value) { return value / operand; }
+	auto operator()(auto value) { return value / operand; }
 };
 
 struct Becomes_Arg {} static constexpr Becomes {};
@@ -78,9 +78,6 @@ private:
 	template <VectorKind K>
 	using Relative = Vector<Dimension, K, Scalar>;
 
-	template <class T>
-	using UnaryFn = std::function<T (T)>;
-
 	// TODO: Figure out how to friend many Vector types at once.
 	friend Relative<Data>;
 	friend Relative<Coordinate>;
@@ -115,7 +112,8 @@ public:
  	void Name(Scalar const& value) requires(Condition)                         \
  	{ elements_m[Index] = value; normalize(); }                                \
  	                                                                           \
- 	void Name(UnaryFn<Scalar> f) requires(Condition)                           \
+ 	template <std::invocable<Scalar> Fn>                                       \
+ 	void Name(Fn&& f) requires(Condition)                                      \
  	{ elements_m[Index] = f(elements_m[Index]); normalize(); }
 
 	// Coordinate/Normal
@@ -231,7 +229,8 @@ public:
 		}
 	}
 
-	void length(UnaryFn<Scalar> f) requires (IsCoordinate)
+	template <std::invocable<Scalar> Fn>
+	void length(Fn&& f) requires (IsCoordinate)
 	{ length(f(length())); }
 
 	[[nodiscard]]
@@ -250,7 +249,8 @@ public:
 		length(std::sqrt(value));
 	}
 
-	void length2(UnaryFn<Scalar> f) requires (IsCoordinate) {
+	template <std::invocable<Scalar> Fn>
+	void length2(Fn&& f) requires (IsCoordinate) {
 		length2(f(length2()));
 	}
 
@@ -270,7 +270,8 @@ public:
 		*this = normal;
 	}
 
-	void direction(UnaryFn<Relative<Normal>> f) requires (IsCoordinate) {
+	template <std::invocable<Relative<Normal>> Fn>
+	void direction(Fn&& f) requires (IsCoordinate) {
 		direction(f(direction()));
 	}
 

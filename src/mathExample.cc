@@ -22,7 +22,6 @@ int main() {
 	std::print("[{}, {}, {}]\n", normal.x(), normal.y(), normal.z());
 	position = Norm3 {position};
 	std::print("[{}, {}, {}]\n", position.x(), position.y(), position.z());
-//	position.direction(Becomes *= -1);
-	position.direction([] (auto n) { return -n; });
+	position.direction(Becomes *= -1);
 	std::print("[{}, {}, {}]\n", position.x(), position.y(), position.z());
 }
