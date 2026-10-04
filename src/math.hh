@@ -138,10 +138,7 @@ public:
 
 	[[nodiscard]]
 	Scalar length() const requires (IsCoordinate && !IsNormal) {
-		Scalar result {0};
-		for (Scalar const& e: elements_m) result += e*e;
-		result = std::sqrt(result);
-		return result;
+		return std::sqrt(length2());
 	}
 
 	void length(Scalar const& value) requires (IsCoordinate && !IsNormal) {
@@ -170,6 +167,26 @@ public:
 		return 1;
 	}
 
+	[[nodiscard]]
+	Scalar length2() const requires (IsCoordinate && !IsNormal) {
+		Scalar result {0};
+		for (Scalar const& e: elements_m) result += e * e;
+		return result;
+	}
+
+	void length2(Scalar const& value) requires (IsCoordinate && !IsNormal) {
+		length(std::sqrt(value));
+	}
+
+	void length2(UnaryFn f) requires (IsCoordinate && !IsNormal) {
+		length2(f(length2()));
+	}
+
+	[[nodiscard]]
+	Scalar length2() const requires (IsNormal) {
+		return 1;
+	}
+
 private:
 	void fillConstant(Scalar value) {
 		for (Scalar& e: elements_m) e = value;
@@ -182,9 +199,9 @@ private:
 	void normalize() {/* Do nothing. */}
 
 	void normalize() requires (IsNormal) {
-		Scalar denominator = As<Coordinate>().length();
-		if (denominator != 0) {
-			for (Scalar& e: elements_m) e /= denominator;
+		Scalar len2 = As<Coordinate>().length2();
+		if (len2 != 0) {
+			for (Scalar& e: elements_m) e /= std::sqrt(len2);
 		}
 		else fill([] (unsigned i) { return i==0? 1: 0; });
 	}
