@@ -3,31 +3,43 @@
 
 double constexpr TWO_PI = 6.2831853071795864769;
 
+template <class T>
 struct BecomesAdded {
-	double operand {0};
-	double operator()(double value) { return value + operand; }
+	T operand {0};
+	T operator()(T value) { return value + operand; }
 };
 
+template <class T>
 struct BecomesSubtracted {
-	double operand {0};
-	double operator()(double value) { return value - operand; }
+	T operand {0};
+	T operator()(T value) { return value - operand; }
 };
 
+template <class T>
 struct BecomesMultiplied {
-	double operand {1};
-	double operator()(double value) { return value * operand; }
+	T operand {1};
+	T operator()(T value) { return value * operand; }
 };
 
+template <class T>
 struct BecomesDivided {
-	double operand {1};
-	double operator()(double value) { return value / operand; }
+	T operand {1};
+	T operator()(T value) { return value / operand; }
 };
 
 struct Becomes_Arg {} static constexpr Becomes {};
-auto operator+=(Becomes_Arg, double n) { return BecomesAdded {n}; }
-auto operator-=(Becomes_Arg, double n) { return BecomesSubtracted {n}; }
-auto operator*=(Becomes_Arg, double n) { return BecomesMultiplied {n}; }
-auto operator/=(Becomes_Arg, double n) { return BecomesDivided {n}; }
+
+template <class T>
+auto operator+=(Becomes_Arg, T x) { return BecomesAdded {x}; }
+
+template <class T>
+auto operator-=(Becomes_Arg, T x) { return BecomesSubtracted {x}; }
+
+template <class T>
+auto operator*=(Becomes_Arg, T x) { return BecomesMultiplied {x}; }
+
+template <class T>
+auto operator/=(Becomes_Arg, T x) { return BecomesDivided {x}; }
 
 /* ~~ Linear Algebra ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 // for 3D graphics
@@ -65,7 +77,9 @@ private:
 
 	template <VectorKind K>
 	using Relative = Vector<Dimension, K, Scalar>;
-	using UnaryFn = std::function<Scalar (Scalar)>;
+
+	template <class T>
+	using UnaryFn = std::function<T (T)>;
 
 	// TODO: Figure out how to friend many Vector types at once.
 	friend Relative<Data>;
@@ -101,7 +115,7 @@ public:
  	void Name(Scalar const& value) requires(Condition)                         \
  	{ elements_m[Index] = value; normalize(); }                                \
  	                                                                           \
- 	void Name(UnaryFn f) requires(Condition)                                   \
+ 	void Name(UnaryFn<Scalar> f) requires(Condition)                           \
  	{ elements_m[Index] = f(elements_m[Index]); normalize(); }
 
 	// Coordinate/Normal
@@ -207,17 +221,17 @@ public:
 		else fill([&] (unsigned i) { return i==0? value: 0; });
 	}
 
-	void length(BecomesMultiplied m) requires (IsCoordinate) {
+	void length(BecomesMultiplied<Scalar> m) requires (IsCoordinate) {
 		for (Scalar& e: elements_m) e *= m.operand;
 	}
 
-	void length(BecomesDivided d) requires (IsCoordinate) {
+	void length(BecomesDivided<Scalar> d) requires (IsCoordinate) {
 		if (d.operand != 0) {
 			for (Scalar& e: elements_m) e /= d.operand;
 		}
 	}
 
-	void length(UnaryFn f) requires (IsCoordinate)
+	void length(UnaryFn<Scalar> f) requires (IsCoordinate)
 	{ length(f(length())); }
 
 	[[nodiscard]]
@@ -236,7 +250,7 @@ public:
 		length(std::sqrt(value));
 	}
 
-	void length2(UnaryFn f) requires (IsCoordinate) {
+	void length2(UnaryFn<Scalar> f) requires (IsCoordinate) {
 		length2(f(length2()));
 	}
 
@@ -256,7 +270,7 @@ public:
 		*this = normal;
 	}
 
-	void direction(UnaryFn f) requires (IsCoordinate) {
+	void direction(UnaryFn<Relative<Normal>> f) requires (IsCoordinate) {
 		direction(f(direction()));
 	}
 

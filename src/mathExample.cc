@@ -23,6 +23,6 @@ int main() {
 	position = Norm3 {position};
 	std::print("[{}, {}, {}]\n", position.x(), position.y(), position.z());
 //	position.direction(Becomes *= -1);
-//	position.direction([] (auto n) { return -n; });
-//	std::print("[{}, {}, {}]\n", position.x(), position.y(), position.z());
+	position.direction([] (auto n) { return -n; });
+	std::print("[{}, {}, {}]\n", position.x(), position.y(), position.z());
 }
