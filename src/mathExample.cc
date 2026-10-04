@@ -17,4 +17,9 @@ int main() {
 //	position.length(position.length() * 2) // Calls sqrt() multiple times.
 	position.length(Becomes *= 2); // Calls sqrt() never :)
 	std::print("{}\n", position.length());
+
+	Norm3 normal {position};
+	std::print("[{}, {}, {}]\n", normal.x(), normal.y(), normal.z());
+	position = Norm3 {position};
+	std::print("[{}, {}, {}]\n", position.x(), position.y(), position.z());
 }

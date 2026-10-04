@@ -56,90 +56,158 @@ public:
 private:
 	std::array<Scalar, Dimension> elements_m {};
 
+	// Keep track of internal properties here.
 	using enum VectorKind;
 	bool static constexpr IsData {Kind == Data};
 	bool static constexpr IsCoordinate {Kind == Coordinate || Kind == Normal};
+	bool static constexpr IsNormal {Kind == Normal};
 	bool static constexpr IsColor {Kind == Color};
+
+	template <VectorKind K>
+	using Relative = Vector<Dimension, K, Scalar>;
 	using UnaryFn = std::function<Scalar (Scalar)>;
+
+	// TODO: Figure out how to friend many Vector types at once.
+	friend Relative<Data>;
+	friend Relative<Coordinate>;
+	friend Relative<Normal>;
+	friend Relative<Color>;
 
 public:
 	auto operator<=>(Vector const&) const = default;
 
-	Vector() { stdr::fill(elements_m, 0); }
+	Vector() { fillConstant(0); normalize(); }
 
-	Vector(auto const& ... elements): elements_m{Scalar(elements) ... } {}
+	Vector(std::convertible_to<Scalar> auto const& ... elements)
+	:	elements_m {Scalar(elements) ... } { normalize(); }
 
-	// Data elements
+	Vector(Relative<Data> const& data)
+	:	elements_m {data.elements_m} { normalize(); }
+
+	// Data elements //
 	[[nodiscard]]
 	Scalar const& operator[](unsigned i) const requires (IsData)
 	{ return elements_m[i]; }
 
+	// No need to normalize, non-Data Vectors only have const access.
 	Scalar& operator[](unsigned i) requires (IsData)
 	{ return elements_m[i]; }
 
+	// Coordinate/Color elements //
+#	define DefineElementProperty(Name, Index, Condition)                       \
+ 	[[nodiscard]] Scalar const& Name() const requires(Condition)               \
+ 	{ return elements_m[Index]; }                                              \
+ 	                                                                           \
+ 	void Name(Scalar const& value) requires(Condition)                         \
+ 	{ elements_m[Index] = value; normalize(); }                                \
+ 	                                                                           \
+ 	void Name(UnaryFn f) requires(Condition)                                   \
+ 	{ elements_m[Index] = f(elements_m[Index]); normalize(); }
+
+	// Coordinate/Normal
+	DefineElementProperty(x, 0, IsCoordinate && Dimension > 0);
+	DefineElementProperty(y, 1, IsCoordinate && Dimension > 1);
+	DefineElementProperty(z, 2, IsCoordinate && Dimension > 2);
+	DefineElementProperty(w, 3, IsCoordinate && Dimension > 3);
+
+	// Color
+	DefineElementProperty(r, 0, IsColor && Dimension > 0);
+	DefineElementProperty(g, 1, IsColor && Dimension > 1);
+	DefineElementProperty(b, 2, IsColor && Dimension > 2);
+	DefineElementProperty(a, 3, IsColor && Dimension > 3);
+
+#	undef DefineElementProperty
+
+	// Conversions //
+
+	// The user is allowed to peek into the underlying data of any Vector.
+	Relative<Data> const& data() const requires (!IsData)
+	{ return *((Relative<Data>*)this); }
+
+	// Coordinates are allowed to downcast to Normals
+	operator Relative<Normal>() const requires (IsCoordinate && !IsNormal)
+	{ return Relative<Normal> {data()}; }
+
+	// ... and Normals are allowed to upcast to Coordinates.
+	operator Relative<Coordinate>() const requires (IsNormal)
+	{ return Relative<Coordinate> {data()}; }
+
+	// Operators //
+
+	// Properties //
+
 	[[nodiscard]]
-	Scalar const& x() const requires (IsCoordinate && Dimension >= 1)
-	{ return elements_m[0]; }
-
-	// Coordinate elements
-	void x(Scalar const& value) requires (IsCoordinate && Dimension >= 1)
-	{ elements_m[0] = value; }
-
-	void x(UnaryFn f) requires (IsCoordinate && Dimension >= 1)
-	{ elements_m[0] = f(elements_m[0]); }
-
-	[[nodiscard]]
-	Scalar const& y() const requires (IsCoordinate && Dimension >= 2)
-	{ return elements_m[1]; }
-
-	void y(Scalar const& value) requires (IsCoordinate && Dimension >= 2)
-	{ elements_m[1] = value; }
-
-	void y(UnaryFn f) requires (IsCoordinate && Dimension >= 2)
-	{ elements_m[1] = f(elements_m[1]); }
-
-	[[nodiscard]]
-	Scalar const& z() const requires (IsCoordinate && Dimension >= 3)
-	{ return elements_m[2]; }
-
-	void z(Scalar const& value) requires (IsCoordinate && Dimension >= 3)
-	{ elements_m[2] = value; }
-
-	void z(UnaryFn f) requires (IsCoordinate && Dimension >= 3)
-	{ elements_m[2] = f(elements_m[2]); }
-
-	// Properties
-	[[nodiscard]]
-	Scalar length() const requires (IsCoordinate) {
+	Scalar length() const requires (IsCoordinate && !IsNormal) {
 		Scalar result {0};
-		for (unsigned i=0; i<Dimension; i++) {
-			result += elements_m[i] * elements_m[i];
-		}
+		for (Scalar const& e: elements_m) result += e*e;
 		result = std::sqrt(result);
 		return result;
 	}
 
-	void length(Scalar const& value) requires (IsCoordinate) {
-		Scalar ratio {value / length()};
-		for (unsigned i=0; i<Dimension; i++) {
-			elements_m[i] *= ratio;
+	void length(Scalar const& value) requires (IsCoordinate && !IsNormal) {
+		if (length() != 0) {
+			Scalar ratio {value / length()};
+			for (Scalar& e: elements_m) e *= ratio;
+		}
+		else fill([&] (unsigned i) { return i==0? value: 0; });
+	}
+
+	void length(BecomesMultiplied m) requires (IsCoordinate && !IsNormal) {
+		for (Scalar& e: elements_m) e *= m.operand;
+	}
+
+	void length(BecomesDivided d) requires (IsCoordinate && !IsNormal) {
+		if (d.operand != 0) {
+			for (Scalar& e: elements_m) e /= d.operand;
 		}
 	}
 
-	void length(BecomesMultiplied m) requires (IsCoordinate) {
-		std::print("Clever square root avoidance!\n");
-		for (unsigned i=0; i<Dimension; i++) {
-			elements_m[i] *= m.operand;
-		}
-	}
-
-	void length(UnaryFn f) requires (IsCoordinate)
+	void length(UnaryFn f) requires (IsCoordinate && !IsNormal)
 	{ length(f(length())); }
+
+	[[nodiscard]]
+	Scalar length() const requires (IsNormal) {
+		return 1;
+	}
+
+private:
+	void fillConstant(Scalar value) {
+		for (Scalar& e: elements_m) e = value;
+	}
+
+	void fill(auto&& f) {
+		for (unsigned i=0; Scalar& e: elements_m) e = f(i++);
+	}
+
+	void normalize() {/* Do nothing. */}
+
+	void normalize() requires (IsNormal) {
+		Scalar denominator = As<Coordinate>().length();
+		if (denominator != 0) {
+			for (Scalar& e: elements_m) e /= denominator;
+		}
+		else fill([] (unsigned i) { return i==0? 1: 0; });
+	}
+
+	void normalize() requires (IsColor) {
+		for (Scalar& e: elements_m) {
+			if (e < 0) e = 0;
+			if (e > 1) e = 1;
+		}
+	}
+
+	template <VectorKind K>
+	Relative<K> As()
+	{ return (Relative<K>&)*this; }
+
+	template <VectorKind K>
+	Relative<K> As() const
+	{ return (Relative<K> const&)*this; }
 };
 
 using Coord3 = Vector<3, VectorKind::Coordinate>;
 using Norm3 = Vector<3, VectorKind::Normal>;
-using Color = Vector<3, VectorKind::Color>;
+using Color3 = Vector<3, VectorKind::Color>;
 
 /* ~~ Matrices ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
