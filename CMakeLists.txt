@@ -50,7 +50,6 @@ add_executable(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME} PRIVATE
 	${SOURCE_DIR}/main.cc
-	${SOURCE_DIR}/math.cc
 	${SOURCE_DIR}/vertex.glsl
 	${SOURCE_DIR}/fragment.glsl
 )
@@ -81,7 +80,6 @@ add_executable(test-${PROJECT_NAME})
 
 target_sources(test-${PROJECT_NAME} PRIVATE
 	${TEST_DIR}/gtest.cc
-	${SOURCE_DIR}/math.cc
 )
 
 target_link_libraries(test-${PROJECT_NAME} PRIVATE
