@@ -85,12 +85,17 @@ private:
 	friend Relative<Color>;
 
 public:
+	// Further public properties
+	using DataType = Relative<Data>;
 	auto operator<=>(Vector const&) const = default;
 
 	Vector() { fillConstant(0); normalize(); }
 
 	Vector(std::convertible_to<Scalar> auto const& ... elements)
 	:	elements_m {Scalar(elements) ... } { normalize(); }
+
+	Vector(std::initializer_list<Scalar> il)
+	{ stdr::copy(il, stdr::begin(elements_m)); normalize(); }
 
 	Vector(Relative<Data> const& data)
 	:	elements_m {data.elements_m} { normalize(); }
@@ -145,6 +150,7 @@ public:
 	{ return Relative<Coordinate> {data()}; }
 
 	// Operators //
+
 	Vector operator+() const requires (!IsData) {
 		Vector result = *this;
 		for (Scalar& e: result.elements_m) e = +e;
@@ -160,7 +166,7 @@ public:
 	}
 
 	Vector const& operator+=(Vector const& other) requires (!IsData) {
-		for (auto& [left, right]: stdv::zip(elements_m, other.elements_m)) {
+		for (auto&& [left, right]: stdv::zip(elements_m, other.elements_m)) {
 			left += right;
 		}
 		normalize();
@@ -168,7 +174,7 @@ public:
 	}
 
 	Vector const& operator-=(Vector const& other) requires (!IsData) {
-		for (auto& [left, right]: stdv::zip(elements_m, other.elements_m)) {
+		for (auto&& [left, right]: stdv::zip(elements_m, other.elements_m)) {
 			left -= right;
 		}
 		normalize();

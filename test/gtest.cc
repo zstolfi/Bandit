@@ -8,20 +8,13 @@
 
 /* ~~ 3D Coordinates ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-TEST(BanditVector, CompiletimeProperties) {
-	EXPECT_EQ(Vect3::Dimensions, 3);
-	EXPECT_CONCEPT(std::convertible_to, Vect3::ScalarType, double);
-	EXPECT_CONCEPT(IsRangeOf, Vect3::DataType, Vect3::ScalarType);
-}
-
-TEST(BanditCoordinate, CompiletimeProperties) {
+TEST(Bandit3DCoordinate, CompiletimeProperties) {
 	EXPECT_CONCEPT(std::regular, Coord3);
-	EXPECT_CONCEPT(std::derived_from, Coord3, Vect3);
-	EXPECT_EQ(Coord3::Dimensions, 3);
-	EXPECT_CONCEPT(std::convertible_to, Coord3::ScalarType, double);
+	EXPECT_EQ(Coord3::Dimension, 3);
+	EXPECT_CONCEPT(std::convertible_to, Coord3::Scalar, double);
 }
 
-TEST(BanditCoordinate, EmptyConstruction) {
+TEST(Bandit3DCoordinate, EmptyConstruction) {
 	Coord3 empty;
 	EXPECT_EQ(empty, Coord3 ());
 	EXPECT_EQ(empty, Coord3 {});
@@ -30,13 +23,13 @@ TEST(BanditCoordinate, EmptyConstruction) {
 	EXPECT_EQ(empty, Coord3 ({0, 0, 0}));
 }
 
-TEST(BanditCoordinate, Construction) {
+TEST(Bandit3DCoordinate, Construction) {
 	Coord3 c {1, 2, 3};
 	using D = Coord3::DataType;
 	EXPECT_EQ(c.data(), (D {1, 2, 3}));
 }
 
-TEST(BanditCoordinate, Position) {
+TEST(Bandit3DCoordinate, Position) {
 	Coord3 c {-1, -2, -3};
 	// These are [[nodiscard]], but I don't know how to test for that.
 	EXPECT_EQ(c.x(), -1);
@@ -52,7 +45,7 @@ TEST(BanditCoordinate, Position) {
 	EXPECT_EQ(c.data(), (D { 1,  2,  3}));
 }
 
-TEST(BanditCoordinate, UnaryPlus) {
+TEST(Bandit3DCoordinate, UnaryPlus) {
 	Coord3 c {1, 2, 3};
 
 	using D = Coord3::DataType;
@@ -62,7 +55,7 @@ TEST(BanditCoordinate, UnaryPlus) {
 	EXPECT_EQ(c.data(), (D {1, 2, 3}));
 }
 
-TEST(BanditCoordinate, UnaryMinus) {
+TEST(Bandit3DCoordinate, UnaryMinus) {
 	Coord3 c {1, 2, 3};
 
 	using D = Coord3::DataType;
@@ -72,7 +65,7 @@ TEST(BanditCoordinate, UnaryMinus) {
 	EXPECT_EQ(c.data(), (D {-1, -2, -3}));
 }
 
-TEST(BanditCoordinate, CoordinateAddition) {
+TEST(Bandit3DCoordinate, CoordinateAddition) {
 	Coord3 a {1, 2, 3}, b {8, 7, 6};
 
 	using D = Coord3::DataType;
@@ -81,7 +74,7 @@ TEST(BanditCoordinate, CoordinateAddition) {
 	EXPECT_EQ(a.data(), (D {2, 4, 6}));
 }
 
-TEST(BanditCoordinate, CoordinateSubtraction) {
+TEST(Bandit3DCoordinate, CoordinateSubtraction) {
 	Coord3 a {1, 2, 3}, b {8, 7, 6};
 
 	using D = Coord3::DataType;
@@ -90,7 +83,7 @@ TEST(BanditCoordinate, CoordinateSubtraction) {
 	EXPECT_EQ(a.data(), (D {0, 0, 0}));
 }
 
-TEST(BanditCoordinate, ScalarMultiplication) {
+TEST(Bandit3DCoordinate, ScalarMultiplication) {
 	Coord3 c {2, 5, 1};
 
 	using D = Coord3::DataType;
@@ -100,7 +93,7 @@ TEST(BanditCoordinate, ScalarMultiplication) {
 	EXPECT_EQ(c.data(), (D {3, 7.5, 1.5}));
 }
 
-TEST(BanditCoordinate, ScalarDivision) {
+TEST(Bandit3DCoordinate, ScalarDivision) {
 	Coord3 c {3, 6, 9};
 
 	using D = Coord3::DataType;
@@ -109,56 +102,56 @@ TEST(BanditCoordinate, ScalarDivision) {
 	EXPECT_EQ(c.data(), (D {1, 2, 3}));
 }
 
-TEST(BanditCoordinate, Distance) {
+TEST(Bandit3DCoordinate, Length) {
 	Coord3 position {};
-	Coord3::ScalarType const Epsilon {1e-9}; // one billionth
+	Coord3::Scalar const Epsilon {1e-9}; // one billionth
 
 	// Reading
 	position = {0, 0, 0};
-	EXPECT_NEAR(position.distance() , 0, Epsilon);
-	EXPECT_NEAR(position.distance2(), 0, Epsilon);
+	EXPECT_NEAR(position.length() , 0, Epsilon);
+	EXPECT_NEAR(position.length2(), 0, Epsilon);
 
 	position = {1, 0, 0};
-	EXPECT_NEAR(position.distance() , 1, Epsilon);
-	EXPECT_NEAR(position.distance2(), 1, Epsilon);
+	EXPECT_NEAR(position.length() , 1, Epsilon);
+	EXPECT_NEAR(position.length2(), 1, Epsilon);
 
 	position = {3, 4, 12}; // https://math.stackexchange.com/a/2863663
-	EXPECT_NEAR(position.distance() , 13, Epsilon);
-	EXPECT_NEAR(position.distance2(), 169, Epsilon);
+	EXPECT_NEAR(position.length() , 13, Epsilon);
+	EXPECT_NEAR(position.length2(), 169, Epsilon);
 
 	position = {0, 1, -1};
-	EXPECT_NEAR(position.distance() , std::sqrt(2), Epsilon);
-	EXPECT_NEAR(position.distance2(), 2           , Epsilon);
+	EXPECT_NEAR(position.length() , std::sqrt(2), Epsilon);
+	EXPECT_NEAR(position.length2(), 2           , Epsilon);
 
 	position = {2, 5, 1};
-	EXPECT_NEAR(position.distance() , std::sqrt(30), Epsilon);
-	EXPECT_NEAR(position.distance2(), 30           , Epsilon);
+	EXPECT_NEAR(position.length() , std::sqrt(30), Epsilon);
+	EXPECT_NEAR(position.length2(), 30           , Epsilon);
 
 	// Writing
-	position.distance(9);
-	EXPECT_NEAR(position.distance() , 9 , Epsilon);
-	EXPECT_NEAR(position.distance2(), 81, Epsilon);
+	position.length(9);
+	EXPECT_NEAR(position.length() , 9 , Epsilon);
+	EXPECT_NEAR(position.length2(), 81, Epsilon);
 
-	position.distance(0);
-	EXPECT_NEAR(position.distance() , 0, Epsilon);
-	EXPECT_NEAR(position.distance2(), 0, Epsilon);
+	position.length(0);
+	EXPECT_NEAR(position.length() , 0, Epsilon);
+	EXPECT_NEAR(position.length2(), 0, Epsilon);
 
-	position.distance2(25);
-	EXPECT_NEAR(position.distance() , 5 , Epsilon);
-	EXPECT_NEAR(position.distance2(), 25, Epsilon);
+	position.length2(25);
+	EXPECT_NEAR(position.length() , 5 , Epsilon);
+	EXPECT_NEAR(position.length2(), 25, Epsilon);
 
-	position.distance2(0);
-	EXPECT_NEAR(position.distance() , 0, Epsilon);
-	EXPECT_NEAR(position.distance2(), 0, Epsilon);
+	position.length2(0);
+	EXPECT_NEAR(position.length() , 0, Epsilon);
+	EXPECT_NEAR(position.length2(), 0, Epsilon);
 }
 
-TEST(BanditCoordinatePair, Distance) {
+TEST(Bandit3DCoordinatePair, Distance) {
 	Coord3 me {0, 0, 0};
 	Coord3 you {0, 0, 0};
 	EXPECT_EQ((me, you).distance(), 0);
 	EXPECT_EQ((me, you).distance2(), 0);
 
-	Coord3::ScalarType n = 1'000'000;
+	Coord3::Scalar n = 1'000'000;
 	me = {n, n, n};
 	you = {n, n, n};
 	EXPECT_EQ((me, you).distance(), 0);
@@ -175,7 +168,7 @@ TEST(BanditCoordinatePair, Distance) {
 	EXPECT_EQ((me, you).distance2(), 246);
 }
 
-TEST(BanditCoordinatePair, DotProduct) {
+TEST(Bandit3DCoordinatePair, DotProduct) {
 	Coord3 a {0, 0, 0};
 	Coord3 b {0, 0, 0};
 	EXPECT_EQ((a, b).dot(), 0);
@@ -199,10 +192,10 @@ TEST(BanditCoordinatePair, DotProduct) {
 
 /* ~~ 3D Normalized Coordinates ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-TEST(BanditNormal, CompiletimeProperties) {
-	EXPECT_CONCEPT(std::derived_from, Norm3, Vect3);
-	EXPECT_EQ(Norm3::Dimensions, 3);
-	EXPECT_CONCEPT(std::convertible_to, Norm3::ScalarType, double);
+TEST(Bandi3DtNormal, CompiletimeProperties) {
+	EXPECT_CONCEPT(std::regular, Coord3);
+	EXPECT_EQ(Norm3::Dimension, 3);
+	EXPECT_CONCEPT(std::convertible_to, Norm3::Scalar, double);
 }
 
 

@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <initializer_list>
 #include <map>
 #include <optional>
 #include <print>
