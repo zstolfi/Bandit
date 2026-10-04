@@ -44,8 +44,8 @@ auto operator/=(Becomes_Arg, T x) { return BecomesDivided {x}; }
 /* ~~ Linear Algebra ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 // for 3D graphics
 
-template <class>
-concept IsScalar = true; // TODO
+template <class T>
+concept IsScalar = std::convertible_to<T, double>; // TODO
 
 enum struct VectorKind {
 	Data, // [0] [1] [2] ...
@@ -87,6 +87,8 @@ private:
 public:
 	// Further public properties
 	using DataType = Relative<Data>;
+	bool static constexpr UseInRegularParameters {true};
+
 	auto operator<=>(Vector const&) const = default;
 
 	Vector() { fillConstant(0); normalize(); }
@@ -139,7 +141,7 @@ public:
 
 	// The user is allowed to peek into the underlying data of any Vector.
 	Relative<Data> const& data() const requires (!IsData)
-	{ return *((Relative<Data>*)this); }
+	{ return (Relative<Data> const&)*this; }
 
 	// Coordinates are allowed to downcast to Normals
 	operator Relative<Normal>() const requires (IsCoordinate)
@@ -152,14 +154,14 @@ public:
 	// Operators //
 
 	Vector operator+() const requires (!IsData) {
-		Vector result = *this;
+		Vector result {*this};
 		for (Scalar& e: result.elements_m) e = +e;
 		result.normalize();
 		return result;
 	}
 
 	Vector operator-() const requires (!IsData) {
-		Vector result = *this;
+		Vector result {*this};
 		for (Scalar& e: result.elements_m) e = -e;
 		result.normalize();
 		return result;
@@ -353,24 +355,57 @@ public:
 
 template <class ... Args>
 class RegularParameters: std::tuple<Args ... > {
-	template <class ... Ts>
-	bool static constexpr Arguments =
-		std::same_as<std::tuple<Ts ... >, std::tuple<Args ... >>
-	;
+	using Tuple = std::tuple<Args ... >;
+	using enum VectorKind;
+
+	template <unsigned I>
+	using Get = std::tuple_element_t<I, Tuple>;
+
+	// Determine What types of argument tuples to support properties for.
+	template <VectorKind ... Ks>
+	bool static constexpr VectorPair {
+		sizeof ... (Args) == 2 &&
+		Get<0>::Dimension == Get<1>::Dimension &&
+		Get<0>::Kind == Get<1>::Kind &&
+		((Get<0>::Kind == Ks) || ... )
+	};
+
 
 public:
-	RegularParameters(Args const& ... args): std::tuple<Args ... >{args ... } {}
+	RegularParameters(Args const& ... args): Tuple {args ... } {}
 
-	Coord3::Scalar dot() const requires Arguments<Coord3, Coord3>;
-	Coord3::Scalar distance() const requires Arguments<Coord3, Coord3>;
-	Coord3::Scalar distance2() const requires Arguments<Coord3, Coord3>;
+	auto dot() const requires VectorPair<Coordinate> {
+		typename Get<0>::Scalar result {};
+		/* ... */
+		return result;
+	}
+
+	auto distance() const requires VectorPair<Coordinate> {
+		typename Get<0>::Scalar result {};
+		/* ... */
+		return result;
+	}
+
+	auto distance2() const requires VectorPair<Coordinate> {
+		typename Get<0>::Scalar result {};
+		/* ... */
+		return result;
+	}
 
 private:
-	template <auto I>
+	// Member access helper.
+	template <unsigned I>
 	auto const& get() const { return std::get<I>(*this); }
 };
 
-RegularParameters<Coord3, Coord3> operator,(Coord3 a, Coord3 b);
+template <class T>
+concept RegularParametersTarget =
+	requires { T::UseInRegularParameters; } &&
+	T::UseInRegularParameters == true
+;
+
+template <RegularParametersTarget T, RegularParametersTarget U>
+auto operator,(T const& a, U const& b) { return RegularParameters {a, b}; }
 
 /* ~~ Group Theory ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 // for puzzle logic
@@ -502,4 +537,6 @@ struct std::formatter<Permutation>: std::formatter<std::string> {
 	}
 };
 
-std::ostream& operator<<(std::ostream& os, Permutation const& p);
+std::ostream& operator<<(std::ostream& os, Permutation const& p) {
+	return os << std::format("{}", p);
+}
