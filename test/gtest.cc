@@ -10,8 +10,8 @@
 
 TEST(Bandit3DCoordinate, CompiletimeProperties) {
 	EXPECT_CONCEPT(std::regular, Coord3);
-	EXPECT_EQ(Coord3::Dimension, 3);
-	EXPECT_CONCEPT(std::convertible_to, Coord3::Scalar, double);
+	EXPECT_EQ(Coord3::Dimension(), 3);
+	EXPECT_CONCEPT(std::convertible_to, Coord3::ScalarType, double);
 }
 
 TEST(Bandit3DCoordinate, EmptyConstruction) {
@@ -104,7 +104,7 @@ TEST(Bandit3DCoordinate, ScalarDivision) {
 
 TEST(Bandit3DCoordinate, Length) {
 	Coord3 position {};
-	Coord3::Scalar const Epsilon {1e-9}; // one billionth
+	Coord3::ScalarType const Epsilon {1e-9}; // one billionth
 
 	// Reading
 	position = {0, 0, 0};
@@ -151,7 +151,7 @@ TEST(Bandit3DCoordinatePair, Distance) {
 	EXPECT_EQ((me, you).distance(), 0);
 	EXPECT_EQ((me, you).distance2(), 0);
 
-	Coord3::Scalar n = 1'000'000;
+	Coord3::ScalarType n = 1'000'000;
 	me = {n, n, n};
 	you = {n, n, n};
 	EXPECT_EQ((me, you).distance(), 0);
@@ -194,8 +194,8 @@ TEST(Bandit3DCoordinatePair, DotProduct) {
 
 TEST(Bandi3DtNormal, CompiletimeProperties) {
 	EXPECT_CONCEPT(std::regular, Coord3);
-	EXPECT_EQ(Norm3::Dimension, 3);
-	EXPECT_CONCEPT(std::convertible_to, Norm3::Scalar, double);
+	EXPECT_EQ(Norm3::Dimension(), 3);
+	EXPECT_CONCEPT(std::convertible_to, Norm3::ScalarType, double);
 }
 
 

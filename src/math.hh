@@ -121,18 +121,18 @@ public:
 // ------------
 	Matrix() requires (IsData) = default;
 
-	Matrix() requires (IsJustMatrix && IsVector)
+	Matrix() requires (IsJustMatrix || IsVector)
 	{ fill(0); normalize(); }
 
 	Matrix() requires (IsMatrix && !IsJustMatrix)
 	{ fill([] (auto i, auto j) { return i==j? 1: 0; }); }
 
 	Matrix(std::convertible_to<Scalar_t> auto const& ... elements)
-	requires (sizeof ... (elements) == elements_m.size())
+//	requires (sizeof ... (elements) == elements_m.size())
 	:	elements_m {Scalar_t(elements) ... } { normalize(); }
 
 	Matrix(std::initializer_list<Scalar_t> il)
-	requires (il.size() == elements_m.size())
+//	requires (il.size() == elements_m.size())
 	{ stdr::copy(il, stdr::begin(elements_m)); normalize(); }
 
 	Matrix(Relative<Data> const& data)
@@ -176,16 +176,16 @@ public:
  	{ elements_m[Index] = f(elements_m[Index]); normalize(); }
 
 	// Vector/Normal
-	DefineElementProperty(x, 0, IsVector && Dimension > 0);
-	DefineElementProperty(y, 1, IsVector && Dimension > 1);
-	DefineElementProperty(z, 2, IsVector && Dimension > 2);
-	DefineElementProperty(w, 3, IsVector && Dimension > 3);
+	DefineElementProperty(x, 0, (IsJustVector || IsNormal) && Dimension() > 0);
+	DefineElementProperty(y, 1, (IsJustVector || IsNormal) && Dimension() > 1);
+	DefineElementProperty(z, 2, (IsJustVector || IsNormal) && Dimension() > 2);
+	DefineElementProperty(w, 3, (IsJustVector || IsNormal) && Dimension() > 3);
 
 	// Color
-	DefineElementProperty(r, 0, IsColor && Dimension > 0);
-	DefineElementProperty(g, 1, IsColor && Dimension > 1);
-	DefineElementProperty(b, 2, IsColor && Dimension > 2);
-	DefineElementProperty(a, 3, IsColor && Dimension > 3);
+	DefineElementProperty(r, 0, IsColor && Dimension() > 0);
+	DefineElementProperty(g, 1, IsColor && Dimension() > 1);
+	DefineElementProperty(b, 2, IsColor && Dimension() > 2);
+	DefineElementProperty(a, 3, IsColor && Dimension() > 3);
 
 #	undef DefineElementProperty
 
@@ -401,8 +401,8 @@ class RegularParameters: std::tuple<Args ... > {
 		sizeof ... (Args) == 2 &&
 		Get<0>::IsVector && Get<1>::IsVector &&
 		// Any combination of VectorKinds provided are allowed.
-		((Get<0>::Kind == Ks) || ... ) &&
-		((Get<1>::Kind == Ks) || ... )
+		((Get<0>::Kind() == Ks) || ... ) &&
+		((Get<1>::Kind() == Ks) || ... )
 	};
 
 
@@ -410,8 +410,10 @@ public:
 	RegularParameters(Args const& ... args): Tuple {args ... } {}
 
 	auto dot() const requires IsVectorPairOf<AnyVector, NormalVector> {
-		typename Get<0>::Scalar result {};
-		for (unsigned i=0; i<Get<0>::Dimension; i++) {
+		// TODO: Make Get<0>ScalarType a private type alias, maybe set it to
+		// void if our arguments are not vectors.
+		typename Get<0>::ScalarType result {};
+		for (unsigned i=0; i<Get<0>::Dimension(); i++) {
 			result += get<0>().data()[i] * get<1>().data()[i];
 		}
 		return result;
