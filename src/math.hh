@@ -47,87 +47,139 @@ auto operator/=(Becomes_Arg, T x) { return BecomesDivided {x}; }
 template <class T>
 concept IsScalar = std::convertible_to<T, double>; // TODO
 
-enum struct VectorKind {
-	Data, // [0] [1] [2] ...
-	Coordinate, Normal, // X, Y, Z, W
-	Color, // R, G, B, A
+enum struct MatrixKind {
+	Data = 0, // Property-less 1D or 2D array of scalars.
+
+	// Accessed with [i][j]:
+	AnyMatrix = 100, // M x N matrix.
+	TransformationMatrix = 101, // N x N matrix.
+
+	// Accessed with X, Y, Z, W:
+	AnyVector = 200, // M x 1 matrix.
+	NormalVector = 201, // M x 1 matrix which always has unit length.
+
+	// Accessed with R, G, B, A
+	ColorVector = 202, // M x 1 matrix with values always clamped to [0, 1].
 };
 
 template <
-	unsigned Dimension_p,
-	VectorKind Kind_p,
-	IsScalar Scalar_p=double
+	unsigned DimensionM_m,
+	unsigned DimensionN_m,
+	MatrixKind Kind_m=MatrixKind::AnyMatrix,
+	IsScalar Scalar_t=double
 >
-class Vector {
-public:
-	// Our template parameters are no secret.
-	unsigned static constexpr Dimension	{Dimension_p};
-	VectorKind static constexpr Kind {Kind_p};
-	using Scalar = Scalar_p;
+class Matrix {
+	std::array<Scalar_t, DimensionM_m * DimensionN_m> elements_m {};
 
-private:
-	std::array<Scalar, Dimension> elements_m {};
+	template <MatrixKind K>
+	using Relative = Matrix<DimensionM_m, DimensionN_m, K, Scalar_t>;
+	using enum MatrixKind;
 
-	// Keep track of internal properties here.
-	using enum VectorKind;
-	bool static constexpr IsData {Kind == Data};
-	bool static constexpr IsCoordinate {Kind == Coordinate};
-	bool static constexpr IsNormal {Kind == Normal};
-	bool static constexpr IsColor {Kind == Color};
-
-	template <VectorKind K>
-	using Relative = Vector<Dimension, K, Scalar>;
-
-	// TODO: Figure out how to friend many Vector types at once.
+	// TODO: Figure out how to friend many Matrix types at once.
 	friend Relative<Data>;
-	friend Relative<Coordinate>;
-	friend Relative<Normal>;
-	friend Relative<Color>;
+	friend Relative<AnyMatrix>;
+	friend Relative<TransformationMatrix>;
+	friend Relative<AnyVector>;
+	friend Relative<NormalVector>;
+	friend Relative<ColorVector>;
+
+public:
+// Compile-time properties
+// -----------------------
+	using ScalarType = Scalar_t;
+	using DataType = Relative<Data>;
+
+	// Every instantiation has exactly one of these three to be true.
+	bool static constexpr IsData   {unsigned(Kind_m) / 100 == 0};
+	bool static constexpr IsMatrix {unsigned(Kind_m) / 100 == 1};
+	bool static constexpr IsVector {unsigned(Kind_m) / 100 == 2};
+
+	// Matrix kinds
+	bool static constexpr IsJustMatrix {Kind_m == AnyMatrix};
+	bool static constexpr IsTransformation {Kind_m == TransformationMatrix};
+
+	// Vector kinds
+	bool static constexpr IsJustVector {Kind_m == AnyVector};
+	bool static constexpr IsNormal {Kind_m == NormalVector};
+	bool static constexpr IsColor {Kind_m == ColorVector};
+
+	// Compile-time getters
+	auto static constexpr Dimension() requires IsMatrix
+	{ return std::pair {DimensionM_m, DimensionN_m}; }
+
+	unsigned static consteval Dimension() requires IsVector
+	{ return DimensionM_m; }
+
+	MatrixKind static consteval Kind() { return Kind_m; }
 
 public:
 	// Further public properties
-	using DataType = Relative<Data>;
 	bool static constexpr UseInRegularParameters {true};
+	auto operator<=>(Matrix const&) const = default;
 
-	auto operator<=>(Vector const&) const = default;
+// Constructors
+// ------------
+	Matrix() requires (IsData) = default;
 
-	Vector() { fillConstant(0); normalize(); }
+	Matrix() requires (IsJustMatrix && IsVector)
+	{ fill(0); normalize(); }
 
-	Vector(std::convertible_to<Scalar> auto const& ... elements)
-	:	elements_m {Scalar(elements) ... } { normalize(); }
+	Matrix() requires (IsMatrix && !IsJustMatrix)
+	{ fill([] (auto i, auto j) { return i==j? 1: 0; }); }
 
-	Vector(std::initializer_list<Scalar> il)
+	Matrix(std::convertible_to<Scalar_t> auto const& ... elements)
+	requires (sizeof ... (elements) == elements_m.size())
+	:	elements_m {Scalar_t(elements) ... } { normalize(); }
+
+	Matrix(std::initializer_list<Scalar_t> il)
+	requires (il.size() == elements_m.size())
 	{ stdr::copy(il, stdr::begin(elements_m)); normalize(); }
 
-	Vector(Relative<Data> const& data)
+	Matrix(Relative<Data> const& data)
 	:	elements_m {data.elements_m} { normalize(); }
 
-	// Data elements //
+// Data Elements
+// -------------
+	// For use with low-level API's, raw access is always allowed.
 	[[nodiscard]]
-	Scalar const& operator[](unsigned i) const requires (IsData)
+	auto const* pointer() const { return elements_m.data(); }
+
+	// Only data matrices allow the subscript operator. For now, this makes
+	// 4-dimensional vectors the upper bound.
+	[[nodiscard]]
+	Scalar_t const& operator[](unsigned i) const requires (IsData)
 	{ return elements_m[i]; }
 
-	// No need to normalize, non-Data Vectors only have const access.
-	Scalar& operator[](unsigned i) requires (IsData)
+	[[nodiscard]]
+	Scalar_t const& operator[](unsigned i, unsigned j) const requires (IsData)
+	{ return elements_m[i * Dimension().first + j]; }
+
+	// Only non-const Data is allowed to be modified directly, un-normalized.
+	Scalar_t& operator[](unsigned i) requires (IsData)
 	{ return elements_m[i]; }
 
-	// Coordinate/Color elements //
+	[[nodiscard]]
+	Scalar_t& operator[](unsigned i, unsigned j) requires (IsData)
+	{ return elements_m[i * Dimension().first + j]; }
+
+// Vector-only accessors
+// ---------------------
 #	define DefineElementProperty(Name, Index, Condition)                       \
- 	[[nodiscard]] Scalar const& Name() const requires(Condition)               \
+ 	[[nodiscard]] Scalar_t const& Name() const requires(Condition)             \
  	{ return elements_m[Index]; }                                              \
  	                                                                           \
- 	void Name(Scalar const& value) requires(Condition)                         \
+ 	void Name(Scalar_t const& value) requires(Condition)                       \
  	{ elements_m[Index] = value; normalize(); }                                \
  	                                                                           \
- 	template <std::invocable<Scalar> Fn>                                       \
+ 	template <std::invocable<Scalar_t> Fn>                                     \
  	void Name(Fn&& f) requires(Condition)                                      \
  	{ elements_m[Index] = f(elements_m[Index]); normalize(); }
 
-	// Coordinate/Normal
-	DefineElementProperty(x, 0, (IsCoordinate || IsNormal) && Dimension > 0);
-	DefineElementProperty(y, 1, (IsCoordinate || IsNormal) && Dimension > 1);
-	DefineElementProperty(z, 2, (IsCoordinate || IsNormal) && Dimension > 2);
-	DefineElementProperty(w, 3, (IsCoordinate || IsNormal) && Dimension > 3);
+	// Vector/Normal
+	DefineElementProperty(x, 0, IsVector && Dimension > 0);
+	DefineElementProperty(y, 1, IsVector && Dimension > 1);
+	DefineElementProperty(z, 2, IsVector && Dimension > 2);
+	DefineElementProperty(w, 3, IsVector && Dimension > 3);
 
 	// Color
 	DefineElementProperty(r, 0, IsColor && Dimension > 0);
@@ -137,37 +189,37 @@ public:
 
 #	undef DefineElementProperty
 
-	// Conversions //
-
+// Conversions
+// -----------
 	// The user is allowed to peek into the underlying data of any Vector.
 	Relative<Data> const& data() const requires (!IsData)
 	{ return (Relative<Data> const&)*this; }
 
-	// Coordinates are allowed to downcast to Normals
-	operator Relative<Normal>() const requires (IsCoordinate)
-	{ return Relative<Normal> {data()}; }
+	// Vectors are allowed to downcast to Normals
+	operator Relative<NormalVector>() const requires (IsJustVector)
+	{ return Relative<NormalVector> {data()}; }
 
-	// ... and Normals are allowed to upcast to Coordinates.
-	operator Relative<Coordinate>() const requires (IsNormal)
-	{ return Relative<Coordinate> {data()}; }
+	// ... and Normals are allowed to upcast to Vectors.
+	operator Relative<AnyVector>() const requires (IsNormal)
+	{ return Relative<AnyVector> {data()}; }
 
-	// Operators //
-
-	Vector operator+() const requires (!IsData) {
-		Vector result {*this};
-		for (Scalar& e: result.elements_m) e = +e;
+// Operators
+// ---------
+	Matrix operator+() const requires (!IsData) {
+		Matrix result {*this};
+		for (Scalar_t& e: result.elements_m) e = +e;
 		result.normalize();
 		return result;
 	}
 
-	Vector operator-() const requires (!IsData) {
-		Vector result {*this};
-		for (Scalar& e: result.elements_m) e = -e;
+	Matrix operator-() const requires (!IsData) {
+		Matrix result {*this};
+		for (Scalar_t& e: result.elements_m) e = -e;
 		result.normalize();
 		return result;
 	}
 
-	Vector const& operator+=(Vector const& other) requires (!IsData) {
+	Matrix const& operator+=(Matrix const& other) requires (!IsData) {
 		for (auto&& [left, right]: stdv::zip(elements_m, other.elements_m)) {
 			left += right;
 		}
@@ -175,7 +227,7 @@ public:
 		return *this;
 	}
 
-	Vector const& operator-=(Vector const& other) requires (!IsData) {
+	Matrix const& operator-=(Matrix const& other) requires (!IsData) {
 		for (auto&& [left, right]: stdv::zip(elements_m, other.elements_m)) {
 			left -= right;
 		}
@@ -183,165 +235,148 @@ public:
 		return *this;
 	}
 
-	Vector const& operator*=(Scalar const& value) requires (!IsData) {
-		for (Scalar& e: elements_m) e *= value;
+	Matrix const& operator*=(Scalar_t const& value) requires (!IsData) {
+		for (Scalar_t& e: elements_m) e *= value;
 		normalize();
 		return *this;
 	}
 
-	Vector const& operator/=(Scalar const& value) requires (!IsData) {
+	Matrix const& operator/=(Scalar_t const& value) requires (!IsData) {
 		if (value != 0) {
-			for (Scalar& e: elements_m) e /= value;
+			for (Scalar_t& e: elements_m) e /= value;
 		}
 		normalize();
 		return *this;
 	}
 
-	friend Vector operator+(Vector left, Vector const& right)
+	friend Matrix operator+(Matrix left, Matrix const& right)
 	requires (!IsData) { return left += right; }
 
-	friend Vector operator-(Vector left, Vector const& right)
+	friend Matrix operator-(Matrix left, Matrix const& right)
 	requires (!IsData) { return left -= right; }
 
-	friend Vector operator*(Vector left, Scalar const& right)
+	friend Matrix operator*(Matrix left, Scalar_t const& right)
 	requires (!IsData) { return left *= right; }
 
-	friend Vector operator*(Scalar const& left, Vector right)
+	friend Matrix operator*(Scalar_t const& left, Matrix right)
 	requires (!IsData) { return right *= left; }
 
-	friend Vector operator/(Vector left, Scalar const& right)
+	friend Matrix operator/(Matrix left, Scalar_t const& right)
 	requires (!IsData) { return left /= right; }
 
-	// Properties //
-
+// Vector Properties
+// -----------------
 	[[nodiscard]]
-	Scalar length() const requires (IsCoordinate) {
+	Scalar_t length() const requires (IsVector) {
+		if constexpr(IsNormal) return 1;
 		return std::sqrt(length2());
 	}
 
-	void length(Scalar const& value) requires (IsCoordinate) {
+	void length(Scalar_t const& value) requires (IsVector) {
+		if constexpr(IsNormal) return;
 		if (length() != 0) {
-			Scalar ratio {value / length()};
-			for (Scalar& e: elements_m) e *= ratio;
+			Scalar_t ratio {value / length()};
+			for (Scalar_t& e: elements_m) e *= ratio;
 		}
-		else fill([&] (unsigned i) { return i==0? value: 0; });
+		else fill([&] (auto i) { return i==0? value: 0; });
 	}
 
-	void length(BecomesMultiplied<Scalar> m) requires (IsCoordinate) {
-		for (Scalar& e: elements_m) e *= m.operand;
+	void length(BecomesMultiplied<Scalar_t> m) requires (IsJustVector) {
+		for (Scalar_t& e: elements_m) e *= m.operand;
+		normalize();
 	}
 
-	void length(BecomesDivided<Scalar> d) requires (IsCoordinate) {
+	void length(BecomesDivided<Scalar_t> d) requires (IsJustVector) {
 		if (d.operand != 0) {
-			for (Scalar& e: elements_m) e /= d.operand;
+			for (Scalar_t& e: elements_m) e /= d.operand;
+			normalize();
 		}
 	}
 
-	template <std::invocable<Scalar> Fn>
-	void length(Fn&& f) requires (IsCoordinate)
+	template <std::invocable<Scalar_t> Fn>
+	void length(Fn&& f) requires (IsVector)
 	{ length(f(length())); }
 
 	[[nodiscard]]
-	Scalar length() const requires (IsNormal) {
-		return 1;
-	}
-
-	[[nodiscard]]
-	Scalar length2() const requires (IsCoordinate) {
+	Scalar_t length2() const requires (IsVector) {
+		if constexpr(IsNormal) return 1;
 		return (*this, *this).dot();
 	}
 
-	void length2(Scalar const& value) requires (IsCoordinate) {
+	void length2(Scalar_t const& value) requires (IsVector) {
+		if constexpr(IsNormal) return;
 		length(std::sqrt(value));
+		normalize();
 	}
 
-	template <std::invocable<Scalar> Fn>
-	void length2(Fn&& f) requires (IsCoordinate) {
-		length2(f(length2()));
-	}
-
-	[[nodiscard]]
-	Scalar length2() const requires (IsNormal) {
-		return 1;
-	}
+	template <std::invocable<Scalar_t> Fn>
+	void length2(Fn&& f) requires (IsVector)
+	{ length2(f(length2())); }
 
 	[[nodiscard]]
-	Relative<Normal> direction() const requires (IsCoordinate) {
-		return Relative<Normal> {*this};
-	}
+	Relative<NormalVector> direction() const requires (IsJustVector)
+	{ return Relative<NormalVector> {*this}; }
 
-	void direction(Relative<Normal> normal) requires (IsCoordinate) {
-		Scalar len = length();
-		for (Scalar& e: normal.elements_m) e *= len;
+	void direction(Relative<NormalVector> normal) requires (IsJustVector) {
+		Scalar_t len = length();
+		for (Scalar_t& e: normal.elements_m) e *= len;
 		*this = normal;
+		normalize();
 	}
 
-	template <std::invocable<Relative<Normal>> Fn>
-	void direction(Fn&& f) requires (IsCoordinate) {
-		direction(f(direction()));
-	}
+	template <std::invocable<Relative<NormalVector>> Fn>
+	void direction(Fn&& f) requires (IsJustVector)
+	{ direction(f(direction())); }
 
 private:
-	void fillConstant(Scalar value) {
-		for (Scalar& e: elements_m) e = value;
+	void fill(Scalar_t value) {
+		for (Scalar_t& e: elements_m) e = value;
 	}
 
-	void fill(auto&& f) {
-		for (unsigned i=0; Scalar& e: elements_m) e = f(i++);
+	template <std::invocable<unsigned> Fn>
+	void fill(Fn&& f) {
+		for (unsigned i=0; i<elements_m.size(); i++) {
+			elements_m[i] = f(i);
+		}
 	}
 
-	void normalize() {/* Do nothing. */}
+	template <std::invocable<unsigned, unsigned> Fn>
+	void fill(Fn&& f) {
+		for (unsigned i=0; i<Dimension().first; i++)
+		for (unsigned j=0; j<Dimension().second; j++) {
+			elements_m[i * Dimension().first + j] = f(i, j);
+		}
+	}
+
+	void normalize() {/* Do nothing by default. */}
 
 	void normalize() requires (IsNormal) {
-		Scalar len2 = As<Coordinate>().length2();
+		Scalar_t len2 = As<AnyVector>().length2();
 		if (len2 != 0) {
-			for (Scalar& e: elements_m) e /= std::sqrt(len2);
+			for (Scalar_t& e: elements_m) e /= std::sqrt(len2);
 		}
-		else fill([] (unsigned i) { return i==0? 1: 0; });
+		else fill([] (auto i) { return i==0? 1: 0; });
 	}
 
 	void normalize() requires (IsColor) {
-		for (Scalar& e: elements_m) {
+		for (Scalar_t& e: elements_m) {
 			if (e < 0) e = 0;
 			if (e > 1) e = 1;
 		}
 	}
 
-	template <VectorKind K>
+	template <MatrixKind K>
 	Relative<K> As()
 	{ return (Relative<K>&)*this; }
-
-	template <VectorKind K>
-	Relative<K> As() const
-	{ return (Relative<K> const&)*this; }
 };
 
-using Coord3 = Vector<3, VectorKind::Coordinate>;
-using Norm3 = Vector<3, VectorKind::Normal>;
-using Color3 = Vector<3, VectorKind::Color>;
+// TODO: Make type alias for Vector<N, etc>.
+using Coord3 = Matrix<3, 1, MatrixKind::AnyVector>;
+using Norm3 = Matrix<3, 1, MatrixKind::NormalVector>;
+using Color3 = Matrix<3, 1, MatrixKind::ColorVector>;
+using Matx4 = Matrix<4, 4, MatrixKind::AnyMatrix>;
 
-/* ~~ Matrices ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-
-enum struct MatrixKind {
-	Data,
-	Transformation, Rotation
-};
-
-template <
-	unsigned DimensionI,
-	unsigned DimensionJ,
-	MatrixKind Kind,
-	IsScalar Scalar=double
->
-class Matrix {
-	std::array<Scalar, DimensionI * DimensionJ> elements_m;
-
-public:
-	Matrix();
-	auto operator<=>(Matrix const&) const = default;
-
-	/* ... */
-};
+/* ~~ Compound Types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 /* ~~ Relational Properties ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -354,24 +389,27 @@ public:
 template <class ... Args>
 class RegularParameters: std::tuple<Args ... > {
 	using Tuple = std::tuple<Args ... >;
-	using enum VectorKind;
+	using enum MatrixKind;
 
 	template <unsigned I>
 	using Get = std::tuple_element_t<I, Tuple>;
 
 	// Determine What types of argument tuples to support properties for.
-	template <VectorKind ... Ks>
+	template <MatrixKind ... Ks>
 	bool static constexpr IsVectorPairOf {
+		// We have two arguments, both of which are Vectors.
 		sizeof ... (Args) == 2 &&
-		std::same_as<Get<0>, Get<1>> &&
-		((Get<0>::Kind == Ks) || ... )
+		Get<0>::IsVector && Get<1>::IsVector &&
+		// Any combination of VectorKinds provided are allowed.
+		((Get<0>::Kind == Ks) || ... ) &&
+		((Get<1>::Kind == Ks) || ... )
 	};
 
 
 public:
 	RegularParameters(Args const& ... args): Tuple {args ... } {}
 
-	auto dot() const requires IsVectorPairOf<Coordinate> {
+	auto dot() const requires IsVectorPairOf<AnyVector, NormalVector> {
 		typename Get<0>::Scalar result {};
 		for (unsigned i=0; i<Get<0>::Dimension; i++) {
 			result += get<0>().data()[i] * get<1>().data()[i];
@@ -379,27 +417,27 @@ public:
 		return result;
 	}
 
-	auto distance() const requires IsVectorPairOf<Coordinate> {
+	auto distance() const requires IsVectorPairOf<AnyVector, NormalVector> {
 		return std::sqrt(distance2());
 	}
 
-	auto distance2() const requires IsVectorPairOf<Coordinate> {
+	auto distance2() const requires IsVectorPairOf<AnyVector, NormalVector> {
 		return (get<0>() - get<1>()).length2();
 	}
 
 private:
-	// Member access helper.
+	// Member access helper
 	template <unsigned I>
 	auto const& get() const { return std::get<I>(*this); }
 };
 
 template <class T>
-concept RegularParametersTarget =
+concept IsRpOverloadable =
 	requires { T::UseInRegularParameters; } &&
 	T::UseInRegularParameters == true
 ;
 
-template <RegularParametersTarget T, RegularParametersTarget U>
+template <IsRpOverloadable T, IsRpOverloadable U>
 auto operator,(T const& a, U const& b) { return RegularParameters {a, b}; }
 
 /* ~~ Group Theory ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
