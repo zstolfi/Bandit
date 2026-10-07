@@ -43,8 +43,8 @@ class Cube2x2x2 {
 		unsigned face {};
 
 		auto appearance() const {
-			Plane3 result {};
-			result = std::array<Plane3, 6> {{
+			Ray3 result {};
+			result = std::array<Ray3, 6> {{
 				{{0, 0, 0}, {-1, 0, 0}},
 				{{0, 0, 0}, {+1, 0, 0}},
 				{{0, 0, 0}, {0, 0, -1}},

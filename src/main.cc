@@ -113,26 +113,26 @@ void renderLoop(AppWindow& window, AppState& state) {
 		0, 0, 0, 1,
 	}};
 
-	if (auto const& mouse = window.mouse()) {
-		float const panX = 1.0 * (*mouse)[0] / window.size()[0] - 0.5;
-		float const panY = 1.0 * (*mouse)[1] / window.size()[1] - 0.5;
-		view *= Matx4::RotateX(-4.0 * panY);
-		view *= Matx4::RotateY( 6.0 * panX);
-	}
+//	if (auto const& mouse = window.mouse()) {
+//		float const panX = 1.0 * (*mouse)[0] / window.size()[0] - 0.5;
+//		float const panY = 1.0 * (*mouse)[1] / window.size()[1] - 0.5;
+//		view *= Matx4::RotateX(-4.0 * panY);
+//		view *= Matx4::RotateY( 6.0 * panX);
+//	}
 
 	Matx4 model {};
 
 	window.uniform(glUniformMatrix4fv,
 		"projection",
-		1, GL_TRUE, projection.data().data()
+		1, GL_TRUE, projection.pointer()
 	);
 	window.uniform(glUniformMatrix4fv,
 		"view",
-		1, GL_TRUE, view.data().data()
+		1, GL_TRUE, view.pointer()
 	);
 	window.uniform(glUniformMatrix4fv,
 		"model",
-		1, GL_TRUE, model.data().data()
+		1, GL_TRUE, model.pointer()
 	);
 
 	glBindVertexArray(window.VAO());

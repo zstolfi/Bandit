@@ -41,8 +41,7 @@ auto operator*=(Becomes_Arg, T x) { return BecomesMultiplied {x}; }
 template <class T>
 auto operator/=(Becomes_Arg, T x) { return BecomesDivided {x}; }
 
-/* ~~ Linear Algebra ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-// for 3D graphics
+/* ~~ Matrix Class ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 template <class T>
 concept IsScalar = std::convertible_to<T, double>; // TODO
@@ -107,10 +106,10 @@ public:
 	auto static constexpr Dimension() requires IsMatrix
 	{ return std::pair {DimensionM_m, DimensionN_m}; }
 
-	unsigned static consteval Dimension() requires IsVector
+	unsigned static constexpr Dimension() requires IsVector
 	{ return DimensionM_m; }
 
-	MatrixKind static consteval Kind() { return Kind_m; }
+	MatrixKind static constexpr Kind() { return Kind_m; }
 
 public:
 	// Further public properties
@@ -328,6 +327,10 @@ public:
 	void direction(Fn&& f) requires (IsJustVector)
 	{ direction(f(direction())); }
 
+// Matrix Properties
+// -----------------
+	// TODO
+
 private:
 	void fill(Scalar_t value) {
 		for (Scalar_t& e: elements_m) e = value;
@@ -370,13 +373,121 @@ private:
 	{ return (Relative<K>&)*this; }
 };
 
-// TODO: Make type alias for Vector<N, etc>.
-using Coord3 = Matrix<3, 1, MatrixKind::AnyVector>;
-using Norm3 = Matrix<3, 1, MatrixKind::NormalVector>;
-using Color3 = Matrix<3, 1, MatrixKind::ColorVector>;
+// TODO: Make Vector alias only instantiable with VectorKinds.
+template <unsigned Dimension, MatrixKind Kind, IsScalar Scalar=double>
+using Vector = Matrix<Dimension, 1, Kind, Scalar>;
+
 using Matx4 = Matrix<4, 4, MatrixKind::AnyMatrix>;
+using Coord3 = Vector<3, MatrixKind::AnyVector>;
+using Norm3 = Vector<3, MatrixKind::NormalVector>;
+using Color3 = Vector<3, MatrixKind::ColorVector>;
 
 /* ~~ Compound Types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+
+template <
+	unsigned Dimension_m,
+	IsScalar Scalar_t=double
+>
+class Ray {
+	using enum MatrixKind;
+	using CospacialVector = Vector<Dimension_m, AnyVector, Scalar_t>;
+	using CospacialNormal = Vector<Dimension_m, NormalVector, Scalar_t>;
+
+	CospacialVector position_m {};
+	CospacialNormal direction_m {};
+
+public:
+	using ScalarType = Scalar_t;
+	unsigned static constexpr Dimension() { return Dimension_m; }
+
+// Constructors
+// ------------
+	Ray() = default;
+
+	Ray(CospacialVector const& position, CospacialNormal const& direction)
+	:	position_m {position}
+	,	direction_m {direction} {}
+
+
+// Properties
+// ----------
+	// TODO
+};
+
+template <
+	unsigned Dimension_m,
+	IsScalar Scalar_t=double
+>
+class Plane {
+	using enum MatrixKind;
+	using CospacialRay = Ray<Dimension_m, Scalar_t>;
+	using CospacialVector = Vector<Dimension_m, AnyVector, Scalar_t>;
+	using CospacialNormal = Vector<Dimension_m, NormalVector, Scalar_t>;
+
+	Scalar_t length_m {};
+	CospacialNormal direction_m {};
+
+public:
+	using ScalarType = Scalar_t;
+	unsigned static constexpr Dimension() { return Dimension_m; }
+
+// Constructors
+// ------------
+	Plane() = default;
+
+	Plane(Scalar_t distance, CospacialNormal const& direction)
+	:	length_m {distance}
+	,	direction_m {direction} {}
+
+	Plane(CospacialVector const& origin, CospacialNormal const& direction)
+	:	length_m {(direction, origin).dot()}
+	,	direction_m {direction} {}
+
+	Plane(CospacialRay const& ray)
+	:	Plane{ray.origin(), ray.direction()} {}
+
+	Plane(std::convertible_to<CospacialVector> auto const& ... points)
+	requires (sizeof ... (points) == Dimension_m) {/* TODO */}
+
+// Properties
+// ----------
+	[[nodiscard]]
+	Scalar_t const& length() const
+	{ return length_m; }
+
+	void length(Scalar_t const& value)
+	{ length_m = value; }
+
+	template <std::invocable<Scalar_t> Fn>
+	void length(Fn&& f)
+	{ length(f(length())); }
+
+	[[nodiscard]]
+	CospacialNormal const& direction() const
+	{ return direction_m; }
+
+	void direction(CospacialNormal const& value)
+	{ direction_m = value; }
+
+	template <std::invocable<CospacialNormal> Fn>
+	void direction(Fn&& f)
+	{ direction(f(direction())); }
+
+	[[nodiscard]]
+	CospacialVector origin() const
+	{ return length() * direction(); }
+
+	void origin(CospacialVector const& value)
+	{ length_m = (direction_m, value).dot(); }
+
+	template <std::invocable<CospacialVector> Fn>
+	void origin(Fn&& f)
+	{ origin(f(origin())); }
+
+};
+
+using Ray3 = Ray<3>;
+using Plane3 = Plane<3>;
 
 /* ~~ Relational Properties ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -442,8 +553,7 @@ concept IsRpOverloadable =
 template <IsRpOverloadable T, IsRpOverloadable U>
 auto operator,(T const& a, U const& b) { return RegularParameters {a, b}; }
 
-/* ~~ Group Theory ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-// for puzzle logic
+/* ~~ Permutation Class ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
 class Permutation {
 	using Index_t = unsigned;
