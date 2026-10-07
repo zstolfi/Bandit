@@ -62,19 +62,19 @@ enum struct MatrixKind {
 };
 
 template <
+	MatrixKind Kind_m,
 	unsigned DimensionM_m,
 	unsigned DimensionN_m,
-	MatrixKind Kind_m=MatrixKind::AnyMatrix,
 	IsScalar Scalar_t=double
 >
-class Matrix {
+class MatrixBase {
 	std::array<Scalar_t, DimensionM_m * DimensionN_m> elements_m {};
 
 	template <MatrixKind K>
-	using Relative = Matrix<DimensionM_m, DimensionN_m, K, Scalar_t>;
+	using Relative = MatrixBase<K, DimensionM_m, DimensionN_m, Scalar_t>;
 	using enum MatrixKind;
 
-	// TODO: Figure out how to friend many Matrix types at once.
+	// TODO: Figure out how to friend many MatrixBase types at once.
 	friend Relative<Data>;
 	friend Relative<AnyMatrix>;
 	friend Relative<TransformationMatrix>;
@@ -103,10 +103,10 @@ public:
 	bool static constexpr IsColor {Kind_m == ColorVector};
 
 	// Compile-time getters
-	auto static constexpr Dimension() requires IsMatrix
+	auto static constexpr Dimension() requires (IsMatrix)
 	{ return std::pair {DimensionM_m, DimensionN_m}; }
 
-	unsigned static constexpr Dimension() requires IsVector
+	unsigned static constexpr Dimension() requires (IsVector)
 	{ return DimensionM_m; }
 
 	MatrixKind static constexpr Kind() { return Kind_m; }
@@ -114,27 +114,27 @@ public:
 public:
 	// Further public properties
 	bool static constexpr UseInRegularParameters {true};
-	auto operator<=>(Matrix const&) const = default;
+	auto operator<=>(MatrixBase const&) const = default;
 
 // Constructors
 // ------------
-	Matrix() requires (IsData) = default;
+	MatrixBase() requires (IsData) = default;
 
-	Matrix() requires (IsJustMatrix || IsVector)
+	MatrixBase() requires (IsJustMatrix || IsVector)
 	{ fill(0); normalize(); }
 
-	Matrix() requires (IsMatrix && !IsJustMatrix)
+	MatrixBase() requires (IsMatrix && !IsJustMatrix)
 	{ fill([] (auto i, auto j) { return i==j? 1: 0; }); }
 
-	Matrix(std::convertible_to<Scalar_t> auto const& ... elements)
+	MatrixBase(std::convertible_to<Scalar_t> auto const& ... elements)
 //	requires (sizeof ... (elements) == elements_m.size())
 	:	elements_m {Scalar_t(elements) ... } { normalize(); }
 
-	Matrix(std::initializer_list<Scalar_t> il)
+	MatrixBase(std::initializer_list<Scalar_t> il)
 //	requires (il.size() == elements_m.size())
 	{ stdr::copy(il, stdr::begin(elements_m)); normalize(); }
 
-	Matrix(Relative<Data> const& data)
+	MatrixBase(Relative<Data> const& data)
 	:	elements_m {data.elements_m} { normalize(); }
 
 // Data Elements
@@ -204,21 +204,21 @@ public:
 
 // Operators
 // ---------
-	Matrix operator+() const requires (!IsData) {
-		Matrix result {*this};
+	MatrixBase operator+() const requires (!IsData) {
+		MatrixBase result {*this};
 		for (Scalar_t& e: result.elements_m) e = +e;
 		result.normalize();
 		return result;
 	}
 
-	Matrix operator-() const requires (!IsData) {
-		Matrix result {*this};
+	MatrixBase operator-() const requires (!IsData) {
+		MatrixBase result {*this};
 		for (Scalar_t& e: result.elements_m) e = -e;
 		result.normalize();
 		return result;
 	}
 
-	Matrix const& operator+=(Matrix const& other) requires (!IsData) {
+	MatrixBase const& operator+=(MatrixBase const& other) requires (!IsData) {
 		for (auto&& [left, right]: stdv::zip(elements_m, other.elements_m)) {
 			left += right;
 		}
@@ -226,7 +226,7 @@ public:
 		return *this;
 	}
 
-	Matrix const& operator-=(Matrix const& other) requires (!IsData) {
+	MatrixBase const& operator-=(MatrixBase const& other) requires (!IsData) {
 		for (auto&& [left, right]: stdv::zip(elements_m, other.elements_m)) {
 			left -= right;
 		}
@@ -234,13 +234,13 @@ public:
 		return *this;
 	}
 
-	Matrix const& operator*=(Scalar_t const& value) requires (!IsData) {
+	MatrixBase const& operator*=(Scalar_t const& value) requires (!IsData) {
 		for (Scalar_t& e: elements_m) e *= value;
 		normalize();
 		return *this;
 	}
 
-	Matrix const& operator/=(Scalar_t const& value) requires (!IsData) {
+	MatrixBase const& operator/=(Scalar_t const& value) requires (!IsData) {
 		if (value != 0) {
 			for (Scalar_t& e: elements_m) e /= value;
 		}
@@ -248,20 +248,20 @@ public:
 		return *this;
 	}
 
-	friend Matrix operator+(Matrix left, Matrix const& right)
-	requires (!IsData) { return left += right; }
+	friend MatrixBase operator+(MatrixBase left, MatrixBase const& right)
+	requires (IsVector) { return left += right; }
 
-	friend Matrix operator-(Matrix left, Matrix const& right)
-	requires (!IsData) { return left -= right; }
+	friend MatrixBase operator-(MatrixBase left, MatrixBase const& right)
+	requires (IsVector) { return left -= right; }
 
-	friend Matrix operator*(Matrix left, Scalar_t const& right)
-	requires (!IsData) { return left *= right; }
+	friend MatrixBase operator*(MatrixBase left, Scalar_t const& right)
+	requires (IsVector) { return left *= right; }
 
-	friend Matrix operator*(Scalar_t const& left, Matrix right)
-	requires (!IsData) { return right *= left; }
+	friend MatrixBase operator*(Scalar_t const& left, MatrixBase right)
+	requires (IsVector) { return right *= left; }
 
-	friend Matrix operator/(Matrix left, Scalar_t const& right)
-	requires (!IsData) { return left /= right; }
+	friend MatrixBase operator/(MatrixBase left, Scalar_t const& right)
+	requires (IsVector) { return left /= right; }
 
 // Vector Properties
 // -----------------
@@ -369,18 +369,26 @@ private:
 	}
 
 	template <MatrixKind K>
-	Relative<K> As()
-	{ return (Relative<K>&)*this; }
+	Relative<K> As() { return *(Relative<K>*)this; }
 };
 
-// TODO: Make Vector alias only instantiable with VectorKinds.
-template <unsigned Dimension, MatrixKind Kind, IsScalar Scalar=double>
-using Vector = Matrix<Dimension, 1, Kind, Scalar>;
+template <unsigned M, unsigned N=M, IsScalar Scalar=double>
+using Matx = MatrixBase<MatrixKind::AnyMatrix, M, N, Scalar>;
 
-using Matx4 = Matrix<4, 4, MatrixKind::AnyMatrix>;
-using Coord3 = Vector<3, MatrixKind::AnyVector>;
-using Norm3 = Vector<3, MatrixKind::NormalVector>;
-using Color3 = Vector<3, MatrixKind::ColorVector>;
+template <unsigned N, IsScalar Scalar=double>
+using Coord = MatrixBase<MatrixKind::AnyVector, N, 1, Scalar>;
+
+template <unsigned N, IsScalar Scalar=double>
+using Norm = MatrixBase<MatrixKind::NormalVector, N, 1, Scalar>;
+
+template <unsigned N, IsScalar Scalar=double>
+using Color = MatrixBase<MatrixKind::ColorVector, N, 1, Scalar>;
+
+// TODO: Replace these throughout the Bandit project.
+using Matx4  = Matx<4>;
+using Coord3 = Coord<3>;
+using Norm3  = Norm<3>;
+using Color3 = Color<3>;
 
 /* ~~ Compound Types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
@@ -390,11 +398,11 @@ template <
 >
 class Ray {
 	using enum MatrixKind;
-	using CospacialVector = Vector<Dimension_m, AnyVector, Scalar_t>;
-	using CospacialNormal = Vector<Dimension_m, NormalVector, Scalar_t>;
+	using CospacialCoord = Coord<Dimension_m, Scalar_t>;
+	using CospacialNorm = Norm<Dimension_m, Scalar_t>;
 
-	CospacialVector position_m {};
-	CospacialNormal direction_m {};
+	CospacialCoord position_m {};
+	CospacialNorm direction_m {};
 
 public:
 	using ScalarType = Scalar_t;
@@ -404,7 +412,7 @@ public:
 // ------------
 	Ray() = default;
 
-	Ray(CospacialVector const& position, CospacialNormal const& direction)
+	Ray(CospacialCoord const& position, CospacialNorm const& direction)
 	:	position_m {position}
 	,	direction_m {direction} {}
 
@@ -421,11 +429,11 @@ template <
 class Plane {
 	using enum MatrixKind;
 	using CospacialRay = Ray<Dimension_m, Scalar_t>;
-	using CospacialVector = Vector<Dimension_m, AnyVector, Scalar_t>;
-	using CospacialNormal = Vector<Dimension_m, NormalVector, Scalar_t>;
+	using CospacialCoord = Coord<Dimension_m, Scalar_t>;
+	using CospacialNorm = Norm<Dimension_m, Scalar_t>;
 
 	Scalar_t length_m {};
-	CospacialNormal direction_m {};
+	CospacialNorm direction_m {};
 
 public:
 	using ScalarType = Scalar_t;
@@ -435,18 +443,18 @@ public:
 // ------------
 	Plane() = default;
 
-	Plane(Scalar_t distance, CospacialNormal const& direction)
+	Plane(Scalar_t distance, CospacialNorm const& direction)
 	:	length_m {distance}
 	,	direction_m {direction} {}
 
-	Plane(CospacialVector const& origin, CospacialNormal const& direction)
+	Plane(CospacialCoord const& origin, CospacialNorm const& direction)
 	:	length_m {(direction, origin).dot()}
 	,	direction_m {direction} {}
 
 	Plane(CospacialRay const& ray)
 	:	Plane{ray.origin(), ray.direction()} {}
 
-	Plane(std::convertible_to<CospacialVector> auto const& ... points)
+	Plane(std::convertible_to<CospacialCoord> auto const& ... points)
 	requires (sizeof ... (points) == Dimension_m) {/* TODO */}
 
 // Properties
@@ -463,24 +471,24 @@ public:
 	{ length(f(length())); }
 
 	[[nodiscard]]
-	CospacialNormal const& direction() const
+	CospacialNorm const& direction() const
 	{ return direction_m; }
 
-	void direction(CospacialNormal const& value)
+	void direction(CospacialNorm const& value)
 	{ direction_m = value; }
 
-	template <std::invocable<CospacialNormal> Fn>
+	template <std::invocable<CospacialNorm> Fn>
 	void direction(Fn&& f)
 	{ direction(f(direction())); }
 
 	[[nodiscard]]
-	CospacialVector origin() const
+	CospacialCoord origin() const
 	{ return length() * direction(); }
 
-	void origin(CospacialVector const& value)
+	void origin(CospacialCoord const& value)
 	{ length_m = (direction_m, value).dot(); }
 
-	template <std::invocable<CospacialVector> Fn>
+	template <std::invocable<CospacialCoord> Fn>
 	void origin(Fn&& f)
 	{ origin(f(origin())); }
 

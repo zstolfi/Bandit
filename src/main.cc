@@ -98,7 +98,8 @@ void renderLoop(AppWindow& window, AppState& state) {
 	double const aspect = 1.0 * width / height;
 	double const near = 0.1, far = 100.0;
 	// https://registry.khronos.org/OpenGL-Refpages/gl2.1/xhtml/gluPerspective.xml
-	Matx4 projection {{
+	using Matx4f = Matx<4, 4, float>;
+	Matx4f projection {{
 		f/aspect, 0, 0, 0,
 		0, f, 0, 0,
 		0, 0, (near + far)/(near - far), (2 * near * far)/(near - far),
@@ -106,7 +107,7 @@ void renderLoop(AppWindow& window, AppState& state) {
 	}};
 
 	Coord3 const position {0, 0, -5};
-	Matx4 view {{
+	Matx4f view {{
 		1, 0, 0, position.x(),
 		0, 1, 0, position.y(),
 		0, 0, 1, position.z(),
@@ -120,7 +121,7 @@ void renderLoop(AppWindow& window, AppState& state) {
 //		view *= Matx4::RotateY( 6.0 * panX);
 //	}
 
-	Matx4 model {};
+	Matx4f model {};
 
 	window.uniform(glUniformMatrix4fv,
 		"projection",
