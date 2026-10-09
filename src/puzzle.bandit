@@ -1,14 +1,19 @@
-Puzzle: [
-	Name: "Rubik's 2x2"
-	Mechanism: Spherical [
-		Internal: [
-			Slice: [Axis: (x = 0)]
-			Slice: [Axis: (y = 0)]
-			Slice: [Axis: (z = 0)]
+Collection: [
+	Puzzle: [
+		Meta: [
+			Name: "Rubik's 2×2"
+			Reference: "https://en.wikipedia.org/wiki/Pocket_Cube"
 		]
-		External: [
-			Hull: Cube(2)
-			Colors: Rubik's
+		Mechanism: Spherical [
+			Internal: [
+				Slice: [Direction: [x: 1] Turn: (1/4)]
+				Slice: [Direction: [y: 1] Turn: (1/4)]
+				Slice: [Direction: [z: 1] Turn: (1/4)]
+			]
+			External: [
+				Surface: (cube 2)
+				Colors: Rubik's
+			]
 		]
 	]
 ]

@@ -1,0 +1,60 @@
+Collection: [
+	Puzzle: [
+		Meta: [
+			Name: "Rubik's 2×2"
+			Reference: "https://en.wikipedia.org/wiki/Pocket_Cube"
+		]
+		Mechanism: Spherical [
+			Internal: [
+				Slice: [Direction: [x: 1] Turn: (1/4)]
+				Slice: [Direction: [y: 1] Turn: (1/4)]
+				Slice: [Direction: [z: 1] Turn: (1/4)]
+			]
+			External: [
+				Surface: (cube 2)
+				Colors: Rubik's
+			]
+		]
+	]
+	Puzzle: [
+		Meta: [
+			Name: "CodeParade's M12"
+			Reference: "https://youtu.be/xwQ5dx4dE9g?t=462"
+		]
+		Mechanism: Planar [
+			Internal: [
+				Slice: Circular [x: -1 y: -1 r: (root 2) Turn: (1/4)]
+				Slice: Circular [x: -1 y:  1 r: (root 2) Turn: (1/4)]
+				Slice: Circular [x:  1 y: -1 r: (root 2) Turn: (1/4)]
+				Slice: Circular [x:  1 y:  1 r: (root 2) Turn: (1/4)]
+				All-Possible-Cuts
+				Moves: [
+					[Slice_0 1] [Slice_3 1]
+					[Slice_2 1] [Slice_1 -1]
+				]
+			]
+			External: [
+				Surface: [
+					Vertices [
+						[x: -1 y:  1] [x:  0 y:  1] [x:  1 y:  1]
+						[x: -1 y:  0] [x:  0 y:  0] [x:  1 y:  0]
+						[x: -1 y: -1] [x:  0 y: -1] [x:  1 y: -1]
+						(infinity)
+					]
+					Faces [
+						[Cycle: [4 5 2 1] Color: (blue)]
+						[Cycle: [4 1 0 3] Color: (red)]
+						[Cycle: [4 3 6 7] Color: (green)]
+						[Cycle: [4 7 8 5] Color: (orange)]
+						[Cycle: [9 2 5 8] Color: (yellow)]
+						[Cycle: [9 0 1 2] Color: (white)]
+						[Cycle: [9 6 3 0] Color: (yellow)]
+						[Cycle: [9 8 7 6] Color: (white)]
+
+					]
+				]
+				Colors: Rubik's
+			]
+		]
+	]
+]
