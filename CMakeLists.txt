@@ -16,7 +16,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # ~~ Directories ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 set(INCLUDE_DIR ".include")
-set(SOURCE_DIR "src")
+set(SOURCE_DIR "source")
 set(TEST_DIR "test")
 set(OUTPUT_DIR ${CMAKE_BINARY_DIR}/output)
 
