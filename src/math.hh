@@ -624,7 +624,7 @@ public:
 	auto inverse() const {
 		auto result = *this;
 		// Inverting is easy. Simply reverse the cycles and voila.
-		// Here I keep the first elements in-place to preserve normalization.
+		// Here I keep the first element in-place to preserve normalization.
 		for (auto& cycle: result.cycles_m) {
 			stdr::reverse(cycle.begin()+1, cycle.end());
 		}
@@ -655,12 +655,15 @@ private:
 	}
 
 	void normalize() {
+		// Remove non-cycles.
 		std::erase_if(cycles_m,
 			[] (auto const& cycle) { return cycle.size() < 2; }
 		);
+		// Greatest element comes first in a cycle.
 		for (auto& cycle: cycles_m) {
 			stdr::rotate(cycle, stdr::max_element(cycle));
 		}
+		// Sort by first (greatest) element.
 		stdr::sort(cycles_m, stdr::less {},
 			[] (auto const& cycle) { return cycle[0]; }
 		);
