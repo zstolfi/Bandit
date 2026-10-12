@@ -4,177 +4,90 @@
 
 template <class T>
 concept IsPuzzle = std::regular<T> && requires(
-	T const state, T modifiable,
-	T::Move move
+	T puzzle, T const puzzleState,
+	T::Action action
 ) {
+	// The user will always able to construct an action.
+	{ action } -> std::regular;
+
 	// The only possible way the user can modify our puzzle's state is by
 	// picking it up, and giving it a twist :)
-	modifiable.apply(move);
+	puzzle.perform(action);
 
-	// Every move advertised by our puzzle is allowed to be tried. It's just
-	// that bandaged puzzles will sometimes "do nothing".
-	{ state.moves() } -> IsRangeOf<typename T::Move>;
+	// As per the name of this software, moves can be bandaged. We return a
+	// falsy value if the user's action would do nothing.
+	{ puzzleState.performable(action) } -> std::convertible_to<bool>;
 
-	// We can report back any appearance information we'd like. It's usually a
-	// good idea to make solved() depend on this data.
-	state.appearance();
-
-	// Multiple solutions can be implemented by returning an object which an
+	// Multiple solutions can be implemented by returning an object with an
 	// overload for operator bool().
-	{ state.solved() } -> std::convertible_to<bool>;
+	{ puzzleState.solved() } -> std::convertible_to<bool>;
 };
 
-// 2x2x2 Rubik's Cube
-// https://www.desmos.com/calculator/6pqhh5uipy
-class Cube2x2x2 {
-	// Index denotes position, value determines sticker.
-	// So if state[20] == 10, position #20 is occupied by sticker #10.
-	std::array<unsigned, 24> state_m {
-		 0,  1,  2,  3,
-		 4,  5,  6,  7,
-		 8,  9, 10, 11,
-		12, 13, 14, 15,
-		16, 17, 18, 19,
-		20, 21, 22, 23,
-	};
+struct PuzzleSpec {/* TODO */};
 
-	// Moves are to be constructed by the user.
+class TwistyPuzzle {
+	// Fundamentally, all twisty puzzles are permutable sets of stickers. You
+	// might think it's more correct to describe them as permutable and
+	// orientable cubies, but it is mathematically simpler (and therefore
+	// less error prone) to describe them by stickers alone.
+
+	// As we are not constraining ourselves to the physical world, the
+	// engineering of digital twisty puzzle mechanisms is not bounded by
+	// reality. For example, puzzles with more possible sticker positions than
+	// stickers (i.e. shape-shifting puzzles or super cubes) are implemented
+	// with an "invisible" sticker color.
+	using ColorIndex_t = unsigned;
+	std::vector<ColorIndex_t> state_m {};
+
+	// Every twisty puzzle specification gives rise to an unchanging set of
+	// properties. Because we'd like to copy around puzzle objects cheaply,
+	// we share these properties with any copies of ourselves.
+	struct Properties_t {
+		friend TwistyPuzzle;
+		decltype(TwistyPuzzle::state_m) solution {};
+		std::vector<Permutation> moves {};
+		Properties_t(PuzzleSpec const&);
+	};
+	std::shared_ptr<Properties_t const> properties_m {};
+
+	// Move objects are just fancy indices, and do not contain permutation data.
 	struct Move_t {
-		unsigned face {};
-
-		auto appearance() const {
-			Ray3 result {};
-			result = std::array<Ray3, 6> {{
-				{{0, 0, 0}, {-1, 0, 0}},
-				{{0, 0, 0}, {+1, 0, 0}},
-				{{0, 0, 0}, {0, 0, -1}},
-				{{0, 0, 0}, {0, 0, +1}},
-				{{0, 0, 0}, {0, -1, 0}},
-				{{0, 0, 0}, {0, +1, 0}},
-			}} [face];
-			return result;
-		}
+		unsigned index {};
+		signed amount {1};
 	};
-
-	// Sticker data is constructed privately, their getters are public though.
-	class Sticker_t {
-		friend Cube2x2x2;
-		unsigned position_m {}, id_m {};
-		Sticker_t() = default;
-		Sticker_t(unsigned position, unsigned id)
-		:	position_m {position}, id_m {id} {}
-
-	public:
-		unsigned position() const { return position_m; }
-		unsigned face()     const { return position_m / 4; }
-		unsigned id()       const { return id_m; }
-		unsigned color()    const { return id_m / 4; }
-
-		auto polygon() const {
-			auto result = std::array<Coord3, 4> {};
-			// https://www.desmos.com/calculator/6pqhh5uipy
-			result = std::array<std::array<Coord3, 4>, 24> {{
-				{{{-1,  0,  0}, {-1,  0, +1}, {-1, +1, +1}, {-1, +1,  0}}},
-				{{{-1,  0,  0}, {-1, +1,  0}, {-1, +1, -1}, {-1,  0, -1}}},
-				{{{-1,  0,  0}, {-1, -1,  0}, {-1, -1, +1}, {-1,  0, +1}}},
-				{{{-1,  0,  0}, {-1,  0, -1}, {-1, -1, -1}, {-1, -1,  0}}},
-
-				{{{+1,  0,  0}, {+1,  0, +1}, {+1, -1, +1}, {+1, -1,  0}}},
-				{{{+1,  0,  0}, {+1, -1,  0}, {+1, -1, -1}, {+1,  0, -1}}},
-				{{{+1,  0,  0}, {+1, +1,  0}, {+1, +1, +1}, {+1,  0, +1}}},
-				{{{+1,  0,  0}, {+1,  0, -1}, {+1, +1, -1}, {+1, +1,  0}}},
-
-				{{{ 0,  0, +1}, { 0, +1, +1}, {-1, +1, +1}, {-1,  0, +1}}},
-				{{{ 0,  0, +1}, {-1,  0, +1}, {-1, -1, +1}, { 0, -1, +1}}},
-				{{{ 0,  0, +1}, { 0, -1, +1}, {+1, -1, +1}, {+1,  0, +1}}},
-				{{{ 0,  0, +1}, {+1,  0, +1}, {+1, +1, +1}, { 0, +1, +1}}},
-
-				{{{ 0,  0, -1}, {-1,  0, -1}, {-1, +1, -1}, { 0, +1, -1}}},
-				{{{ 0,  0, -1}, { 0, -1, -1}, {-1, -1, -1}, {-1,  0, -1}}},
-				{{{ 0,  0, -1}, {+1,  0, -1}, {+1, -1, -1}, { 0, -1, -1}}},
-				{{{ 0,  0, -1}, { 0, +1, -1}, {+1, +1, -1}, {+1,  0, -1}}},
-
-				{{{ 0, +1,  0}, {-1, +1,  0}, {-1, +1, +1}, { 0, +1, +1}}},
-				{{{ 0, +1,  0}, { 0, +1, -1}, {-1, +1, -1}, {-1, +1,  0}}},
-				{{{ 0, +1,  0}, { 0, +1, +1}, {+1, +1, +1}, {+1, +1,  0}}},
-				{{{ 0, +1,  0}, {+1, +1,  0}, {+1, +1, -1}, { 0, +1, -1}}},
-
-				{{{ 0, -1,  0}, { 0, -1, +1}, {-1, -1, +1}, {-1, -1,  0}}},
-				{{{ 0, -1,  0}, {-1, -1,  0}, {-1, -1, -1}, { 0, -1, -1}}},
-				{{{ 0, -1,  0}, {+1, -1,  0}, {+1, -1, +1}, { 0, -1, +1}}},
-				{{{ 0, -1,  0}, { 0, -1, -1}, {+1, -1, -1}, {+1, -1,  0}}},
-			}} [position_m];
-			return result;
-		};
-	};
-
-	// Every 2x2x2 has unchanging properties. Because we only want to store
-	// essential state in this class, properties_m is a static/global variable.
-	// For run-time generated puzzles singletons can be used instead.
-	struct Properties {
-		std::array<Move_t, 6> moves {};
-		std::array<Permutation, 6> permutations {};
-
-		Properties()
-		:	moves {{{0}, {1}, {2}, {3}, {4}, {5}}}
-		,	permutations {{
-				{{ 0,  2,  3,  1}, { 8, 20, 13, 17}, {16,  9, 21, 12}}, // F'
-				{{ 5,  4,  6,  7}, {14, 22, 11, 19}, {23, 10, 18, 15}}, // B'
-				{{ 8, 11, 10,  9}, { 0, 18,  4, 20}, {16,  6, 22,  2}}, // U'
-				{{14, 15, 12, 13}, { 5, 19,  1, 21}, {23,  7, 17,  3}}, // D'
-				{{16, 17, 19, 18}, { 0, 12,  7, 11}, { 8,  1, 15,  6}}, // L'
-				{{23, 21, 20, 22}, { 5, 13,  2, 10}, {14,  3,  9,  4}}, // R'
-			}}
-		{}
-	};
-
-	static inline Properties const properties_m {};
 
 public:
-	using Move = Move_t;
-	using Sticker = Sticker_t;
-	auto operator<=>(Cube2x2x2 const&) const = default;
+// Puzzle Interface
+// ----------------
+	using Action = Move_t;
 
-	void apply(Move move) {
-		properties_m.permutations[move.face].apply_inplace(state_m);
+	TwistyPuzzle() = default;
+
+	TwistyPuzzle(PuzzleSpec const& spec) {
+		properties_m = std::make_shared<Properties_t>(spec);
+		state_m = properties_m->solution;
 	}
 
-	auto const& moves() const { return properties_m.moves; }
+	void perform(Move_t move) {
+		permutation(move).apply_inplace(state_m);
+		canonize();
+	}
 
-	auto appearance() const {
-		struct Result {
-			std::array<Sticker, 24> stickers {};
-			std::array<std::set<unsigned>, 8> cubies {{
-				{ 0,  8, 16},
-				{ 1, 12, 17},
-				{ 2,  9, 20},
-				{ 3, 13, 21},
-				{ 4, 10, 22},
-				{ 5, 14, 23},
-				{ 6, 11, 18},
-				{ 7, 15, 19},
-			}};
-		};
-		auto result = Result {};
-
-		for (unsigned i=0; i<24; i++) {
-			result.stickers[i] = Sticker {i, state_m[i]};
-		}
-
-		return result;
+	bool performable(Move_t move) const {
+		if (move.index >= properties_m->moves.size()) return false;
+		// Bandaging logic will go here.
+		return true;
 	}
 
 	bool solved() const {
-		using Color = unsigned;
-		std::array<std::vector<Color>, 6> faces {};
-		for (auto sticker: appearance().stickers) {
-			auto& face = faces[sticker.face()];
-			auto color = sticker.color();
-			if (face.size() > 1 && face.back() != color) {
-				return false;
-			}
-			else face.push_back(color);
-		}
-		return true;
+		return state_m == properties_m->solution;
 	};
+
+	bool operator==(TwistyPuzzle const&) const = default;
+	auto operator<=>(TwistyPuzzle const&) const = default;
+
+private:
+	Permutation permutation(Move_t move) const;
+
+	void canonize() {/* Do nothing, for now. */}
 };

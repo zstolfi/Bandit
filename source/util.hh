@@ -9,6 +9,7 @@
 #include <functional>
 #include <initializer_list>
 #include <map>
+#include <memory>
 #include <optional>
 #include <print>
 #include <ranges>
@@ -21,6 +22,7 @@
 #include <vector>
 
 // C library
+#include <cassert>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
