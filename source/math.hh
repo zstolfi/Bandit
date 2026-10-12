@@ -591,7 +591,7 @@ public:
 			throw std::invalid_argument {"duplicate cycle indices"};
 		}
 		stdr::copy(cycles, std::back_inserter(cycles_m));
-		normalize();
+		canonize();
 	}
 
 	// TODO: Add multiplication operator overloads.
@@ -624,7 +624,7 @@ public:
 	auto inverse() const {
 		auto result = *this;
 		// Inverting is easy. Simply reverse the cycles and voila.
-		// Here I keep the first element in-place to preserve normalization.
+		// Here I keep the first element in-place to preserve canonization.
 		for (auto& cycle: result.cycles_m) {
 			stdr::reverse(cycle.begin()+1, cycle.end());
 		}
@@ -654,7 +654,7 @@ private:
 		return false;
 	}
 
-	void normalize() {
+	void canonize() {
 		// Remove non-cycles.
 		std::erase_if(cycles_m,
 			[] (auto const& cycle) { return cycle.size() < 2; }
