@@ -2,30 +2,28 @@
 #include "util.hh"
 #include "math.hh"
 
-template <class T>
-concept IsPuzzle = std::regular<T> && requires(
-	T puzzle, T const puzzleState,
-	T::Action action
-) {
-	// The user will always able to construct an action.
-	{ action } -> std::regular;
-
-	// The only possible way the user can modify our puzzle's state is by
-	// picking it up, and giving it a twist :)
-	puzzle.perform(action);
-
-	// As per the name of this software, moves can be bandaged. We return a
-	// falsy value if the user's action would do nothing.
-	{ puzzleState.performable(action) } -> std::convertible_to<bool>;
-
-	// Multiple solutions can be implemented by returning an object with an
-	// overload for operator bool().
-	{ puzzleState.solved() } -> std::convertible_to<bool>;
-};
-
 struct PuzzleSpec {/* TODO */};
 
-class TwistyPuzzle {
+template <class T>
+concept IsPuzzleState = std::regular<T> && requires(
+	T modifiable, T const state,
+	T::Action action
+) {
+	// Actions, provided by the user, are the only way our state is allowed to
+	// be modified.
+	{ action } -> std::regular;
+	modifiable.perform(action);
+
+	// Sometimes we want to know if an action is valid without trying to do it.
+	// This method is also used for implementing bandage logic.
+	{ state.performable(action) } -> std::convertible_to<bool>;
+
+	// Every puzzle has at least one solution, otherwise it's a toy. Multiple
+	// can be provided by returning an object with a operator bool() overload.
+	{ state.solved() } -> std::convertible_to<bool>;
+};
+
+class TwistyPuzzleState {
 	// Fundamentally, all twisty puzzles are permutable sets of stickers. You
 	// might think it's more correct to describe them as permutable and
 	// orientable cubies, but it is mathematically simpler (and therefore
@@ -43,8 +41,8 @@ class TwistyPuzzle {
 	// properties. Because we'd like to copy around puzzle objects cheaply,
 	// we share these properties with any copies of ourselves.
 	struct Properties_t {
-		friend TwistyPuzzle;
-		decltype(TwistyPuzzle::state_m) solution {};
+		friend TwistyPuzzleState;
+		decltype(TwistyPuzzleState::state_m) solution {};
 		std::vector<Permutation> moves {};
 		Properties_t(PuzzleSpec const&);
 	};
@@ -61,20 +59,30 @@ public:
 // ----------------
 	using Action = Move_t;
 
-	TwistyPuzzle() = default;
+	TwistyPuzzleState() = default;
 
-	TwistyPuzzle(PuzzleSpec const& spec) {
+	TwistyPuzzleState(PuzzleSpec const& spec) {
 		properties_m = std::make_shared<Properties_t>(spec);
 		state_m = properties_m->solution;
 	}
 
 	void perform(Move_t move) {
-		permutation(move).apply_inplace(state_m);
+		if (move.amount == 0) return;
+		signed direction = (move.amount < 0)? -1: 1;
+		unsigned times = move.amount * direction;
+
+		auto permutation = properties_m->moves[move.index];
+		if (backwards) permutation = permutation.inverse();
+
+		while (times-- && performable({move.index, direction})) {
+			permutation.apply_inplace(state_m);
+		}
 		canonize();
 	}
 
 	bool performable(Move_t move) const {
 		if (move.index >= properties_m->moves.size()) return false;
+		if (move.amount == 0) return false;
 		// Bandaging logic will go here.
 		return true;
 	}
@@ -83,11 +91,9 @@ public:
 		return state_m == properties_m->solution;
 	};
 
-	bool operator==(TwistyPuzzle const&) const = default;
-	auto operator<=>(TwistyPuzzle const&) const = default;
+	bool operator==(TwistyPuzzleState const&) const = default;
+	auto operator<=>(TwistyPuzzleState const&) const = default;
 
 private:
-	Permutation permutation(Move_t move) const;
-
 	void canonize() {/* Do nothing, for now. */}
 };
