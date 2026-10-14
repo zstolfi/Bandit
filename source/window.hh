@@ -1,6 +1,6 @@
 #pragma once
+#include "graphics.hh"
 #include "util.hh"
-#include <glad/glad.h> // Must be included before GLFW.
 #include <GLFW/glfw3.h>
 
 // Programs right now can only have one monolithic window. When this window
@@ -11,9 +11,7 @@ class Window {
 	std::array<unsigned, 2> size_m {};
 	std::optional<std::array<unsigned, 2>> mouse_m;
 	AppState appState_m {};
-
-	GLuint shaderProgram_m {};
-	GLuint VBO_m {}, VAO_m {};
+	Graphics graphics_m {};
 
 public:
 	using AppFn = void (Window<AppState>&, AppState&);
@@ -28,18 +26,16 @@ public:
 		size_m = {width, height};
 		appState_m = appState;
 		setupErrorLog();
-		setupWindow(title);
-		setupCanvas();
+		setupGlfw(title);
 		setup(*this, appState_m);
 		while (!glfwWindowShouldClose(handle_m)) {
 			renderLoop(*this, appState_m);
+			glfwSwapBuffers(handle_m);
+			glfwPollEvents();
 		}
 	}
 
 	~Window() {
-		glDeleteVertexArrays(1, &VAO_m);
-		glDeleteBuffers(1, &VBO_m);
-		glDeleteProgram(shaderProgram_m);
 		glfwTerminate();
 	}
 
@@ -51,29 +47,12 @@ public:
 	GLFWwindow* handle() const { return handle_m; }
 	auto const& size() const { return size_m; }
 	auto const& mouse() const { return mouse_m; }
-	AppState& appState() /* */ { return appState_m; }
-	AppState& appState() const { return appState_m; }
-
-	GLuint shaderProgram() const { return shaderProgram_m; };
-	GLuint VBO() const { return VBO_m; };
-	GLuint VAO() const { return VAO_m; };
+	auto /* */& graphics() /* */ { return graphics_m; }
+	auto const& graphics() const { return graphics_m; }
 
 	// Setters
 	void size(auto const& val) {
 		glfwSetWindowSize(handle_m, std::get<0>(val), std::get<1>(val));
-	}
-
-	void vertices(std::vector<GLfloat> const& vs) {
-		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
-		glBufferData(GL_ARRAY_BUFFER,
-			vs.size() * sizeof(GLfloat),
-			vs.data(), GL_STATIC_DRAW
-		);
-	}
-
-	template <class ... Args>
-	void uniform(auto& setter, std::string const& name, Args const& ... args) {
-		setter(glGetUniformLocation(shaderProgram_m, name.c_str()), args ... );
 	}
 
 	// GLFW specific
@@ -101,7 +80,7 @@ private:
 		});
 	}
 
-	void setupWindow(std::string const& title) {
+	void setupGlfw(std::string const& title) {
 		// Initialize with the correct OpenGL versioning.
 		if (!glfwInit()) exit("glfwInit: Unable to start GLFW.\n");
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -150,98 +129,5 @@ private:
 				if (!entered) mouse_m = std::nullopt;
 			}
 		);
-	}
-
-	stdfs::path const vertexShaderPath = "vertex.glsl";
-
-	stdfs::path const fragmentShaderPath = "fragment.glsl";
-
-	enum ObjectType {
-		Shader, Program
-	};
-
-	template <ObjectType OT>
-	void checkObject(GLuint object, std::string name) {
-		auto [getObject, getObjectLog, status] = (OT == Shader)
-		?	std::tuple {glGetShaderiv, glGetShaderInfoLog, GL_COMPILE_STATUS}
-		:	std::tuple {glGetProgramiv, glGetProgramInfoLog, GL_LINK_STATUS};
-		auto action = (OT == Shader)? "compile": "link";
-
-		GLint successful {}, logLength {};
-		getObject(object, status, &successful);
-		getObject(object, GL_INFO_LOG_LENGTH, &logLength);
-		if (!successful) {
-			std::vector<char> message(logLength, '\0');
-			glGetShaderInfoLog(object, logLength, {}, message.data());
-			error("{}: Unable to {}.\n{}", name, action, message.data());
-			if (message.empty()) error("(no diagnostic)\n");
-		}
-	}
-
-	auto loadSource(stdfs::path path) {
-		auto result = std::string {};
-
-		if (std::ifstream file {path}) {
-			std::istreambuf_iterator<char> begin {file}, end {};
-			result = {begin, end};
-		}
-		else error("loadSource: Unable to load {}.\n", path.native());
-
-		return result;
-	}
-
-	void setupCanvas() {
-		// Set up shaders.
-		std::string vertexShaderSource = loadSource(vertexShaderPath);
-		std::string fragmentShaderSource = loadSource(fragmentShaderPath);
-		char const* currentSource {};
-
-		GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-		currentSource = vertexShaderSource.c_str();
-		glShaderSource(vertexShader, 1, &currentSource, {});
-		glCompileShader(vertexShader);
-
-		GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-		currentSource = fragmentShaderSource.c_str();
-		glShaderSource(fragmentShader, 1, &currentSource, {});
-		glCompileShader(fragmentShader);
-
-		shaderProgram_m = glCreateProgram();
-		glAttachShader(shaderProgram_m, vertexShader);
-		glAttachShader(shaderProgram_m, fragmentShader);
-		glLinkProgram(shaderProgram_m);
-
-		// Check for errors.
-		checkObject<Shader>(vertexShader, "Vertex shader");
-		checkObject<Shader>(fragmentShader, "Fragment shader");
-		checkObject<Program>(shaderProgram_m, "Shader program");
-
-		// TODO: Maybe handle this with RAII?
-		glDeleteShader(vertexShader);
-		glDeleteShader(fragmentShader);
-
-		// Generate geometry objects.
-		glGenVertexArrays(1, &VAO_m);
-		glGenBuffers(1, &VBO_m);
-
-		glBindVertexArray(VAO_m);
-		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
-
-		// Define position attribute.
-		glVertexAttribPointer(
-			0, 3, GL_FLOAT, GL_FALSE,
-			6 * sizeof(GLfloat), (GLvoid*)(0 * sizeof(GLfloat))
-		);
-		glEnableVertexAttribArray(0);
-
-		// Define color attribute.
-		glVertexAttribPointer(
-			1, 3, GL_FLOAT, GL_FALSE,
-			6 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat))
-		);
-		glEnableVertexAttribArray(1);
-
-		glEnable(GL_DEPTH_TEST);
-
 	}
 };

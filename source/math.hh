@@ -1,7 +1,7 @@
 #pragma once
 #include "util.hh"
 
-double constexpr TWO_PI = 6.2831853071795864769;
+double constexpr REVOLUTION = 6.2831853071795864769;
 
 template <class T>
 struct BecomesAdded {

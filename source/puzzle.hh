@@ -11,7 +11,7 @@ concept IsPuzzleState = std::regular<T> && requires(
 ) {
 	// Actions, provided by the user, are the only way our state is allowed to
 	// be modified.
-	{ action } -> std::regular;
+	requires std::regular<typename T::Action>;
 	modifiable.perform(action);
 
 	// Sometimes we want to know if an action is valid without trying to do it.
@@ -35,14 +35,14 @@ class TwistyPuzzleState {
 	// stickers (i.e. shape-shifting puzzles or super cubes) are implemented
 	// with an "invisible" sticker color.
 	using ColorIndex_t = unsigned;
-	std::vector<ColorIndex_t> state_m {};
+	std::vector<ColorIndex_t> stickers_m {};
 
 	// Every twisty puzzle specification gives rise to an unchanging set of
 	// properties. Because we'd like to copy around puzzle objects cheaply,
 	// we share these properties with any copies of ourselves.
 	struct Properties_t {
 		friend TwistyPuzzleState;
-		decltype(TwistyPuzzleState::state_m) solution {};
+		decltype(TwistyPuzzleState::stickers_m) solution {};
 		std::vector<Permutation> moves {};
 		Properties_t(PuzzleSpec const&);
 	};
@@ -52,6 +52,7 @@ class TwistyPuzzleState {
 	struct Move_t {
 		unsigned index {};
 		signed amount {1};
+		auto operator<=>(Move_t const&) const = default;
 	};
 
 public:
@@ -63,7 +64,7 @@ public:
 
 	TwistyPuzzleState(PuzzleSpec const& spec) {
 		properties_m = std::make_shared<Properties_t>(spec);
-		state_m = properties_m->solution;
+		stickers_m = properties_m->solution;
 	}
 
 	void perform(Move_t move) {
@@ -72,10 +73,10 @@ public:
 		unsigned times = move.amount * direction;
 
 		auto permutation = properties_m->moves[move.index];
-		if (backwards) permutation = permutation.inverse();
+		if (direction < 0) permutation = permutation.inverse();
 
 		while (times-- && performable({move.index, direction})) {
-			permutation.apply_inplace(state_m);
+			permutation.apply_inplace(stickers_m);
 		}
 		canonize();
 	}
@@ -88,7 +89,7 @@ public:
 	}
 
 	bool solved() const {
-		return state_m == properties_m->solution;
+		return stickers_m == properties_m->solution;
 	};
 
 	bool operator==(TwistyPuzzleState const&) const = default;
