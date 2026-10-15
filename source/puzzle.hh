@@ -2,7 +2,10 @@
 #include "util.hh"
 #include "math.hh"
 
-struct PuzzleSpec {/* TODO */};
+struct PuzzleSpec {
+	std::vector<unsigned> solution {};
+	std::vector<Permutation> moves {};
+};
 
 template <class T>
 concept IsPuzzleState = std::regular<T> && requires(
@@ -98,3 +101,9 @@ public:
 private:
 	void canonize() {/* Do nothing, for now. */}
 };
+
+
+TwistyPuzzleState::Properties_t::Properties_t(PuzzleSpec const& spec) {
+	solution = spec.solution;
+	moves = spec.moves;
+}

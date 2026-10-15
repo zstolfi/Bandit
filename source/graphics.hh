@@ -33,7 +33,7 @@ struct Scene {
 
 class Graphics {
 	std::array<unsigned, 2> const* size_m {};
-	Scene scene_m;
+	Scene const* scene_m;
 
 	GLuint shaderProgram_m {};
 	GLuint VBO_m {}, VAO_m {};
@@ -60,7 +60,8 @@ public:
 	GLuint VBO() const { return VBO_m; };
 	GLuint VAO() const { return VAO_m; };
 
-	void scene(Scene const&) {
+	void scene(Scene const& scene) {
+		scene_m = &scene;
 //		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
 //		glBufferData(GL_ARRAY_BUFFER,
 //			vs.size() * sizeof(GLfloat),
@@ -170,9 +171,9 @@ public:
 		glUseProgram(shaderProgram_m);
 
 		glClearColor(
-			scene_m.backgroundColor.r(),
-			scene_m.backgroundColor.g(),
-			scene_m.backgroundColor.b(),
+			scene_m->backgroundColor.r(),
+			scene_m->backgroundColor.g(),
+			scene_m->backgroundColor.b(),
 			1.0
 		);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

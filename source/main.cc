@@ -5,7 +5,23 @@
 
 /* ~~ Application State ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 
-PuzzleSpec const spec2x2x2 {/* TODO */};
+PuzzleSpec const spec2x2x2 {
+	.solution = {
+		// We reserve 0 for "no color".
+		1, 1, 1, 1,
+		2, 2, 2, 2,
+		3, 3, 3, 3,
+		4, 4, 4, 4,
+		5, 5, 5, 5,
+		6, 6, 6, 6
+	},
+	.moves = {
+		// One move per plane cut.
+		Permutation {{ 4,  5,  6,  7}, { 9, 18, 12, 23}, {10, 19, 13, 20}},
+		Permutation {{12, 13, 14, 15}, { 2, 20,  7, 17}, { 3, 21,  4, 18}},
+		Permutation {{20, 21, 22, 23}, { 1, 10,  4, 15}, { 2, 11,  5, 12}},
+	},
+};
 
 // In this software, PuzzleStates are implemented in a mathematically "nice"
 // way. As such, we need another layer of abstraction to manage puzzles in a way
@@ -22,7 +38,7 @@ public:
 	Puzzle() = default;
 
 	Puzzle(auto const& ... args)
-	:	state_m {args ... } {}
+	:	state_m {args ... } { update(); }
 
 	void turn(unsigned index, signed times=1) {
 		// TODO: Add "observers", which allow the puzzle to do moves based on
@@ -108,6 +124,7 @@ void processInput(AppWindow& window, AppState& state) {
 void renderLoop(AppWindow& window, AppState& state) {
 	processInput(window, state);
 	state.mainScene.backgroundColor = ColorsBackground[state.puzzle.solved()];
+	window.graphics().scene(state.mainScene);
 	window.graphics().draw();
 };
 
