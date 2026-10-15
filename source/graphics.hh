@@ -32,17 +32,25 @@ struct Scene {
 };
 
 class Graphics {
+	std::array<unsigned, 2> const* size_m {};
 	Scene scene_m;
 
 	GLuint shaderProgram_m {};
 	GLuint VBO_m {}, VAO_m {};
 
 public:
-	Graphics() {
+	Graphics() = default;
+
+	void load(auto* procAddress, std::array<unsigned, 2> const* size) {
+		// Load in GLAD for normal looking GL function calls.
+		if (!gladLoadGLLoader((GLADloadproc)procAddress)) {
+			exit("gladLoadGLLoader: Unable to start GLAD.\n");
+		}
 		setupOpenGl();
+		size_m = size;
 	};
 
-	~Graphics() {
+	void unload() {
 		glDeleteVertexArrays(1, &VAO_m);
 		glDeleteBuffers(1, &VBO_m);
 		glDeleteProgram(shaderProgram_m);
@@ -65,9 +73,9 @@ public:
 		setter(glGetUniformLocation(shaderProgram_m, name.c_str()), args ... );
 	}
 
-	stdfs::path const vertexShaderPath = "vertex.glsl";
+	stdfs::path static inline const vertexShaderPath = "vertex.glsl";
 
-	stdfs::path const fragmentShaderPath = "fragment.glsl";
+	stdfs::path static inline const fragmentShaderPath = "fragment.glsl";
 
 	enum ObjectType {
 		Shader, Program
@@ -91,7 +99,7 @@ public:
 		}
 	}
 
-	auto loadSource(stdfs::path path) {
+	auto static loadSource(stdfs::path path) {
 		auto result = std::string {};
 
 		if (std::ifstream file {path}) {
@@ -158,7 +166,16 @@ public:
 	}
 
 	void draw() const {
+		glViewport(0, 0, (*size_m)[0], (*size_m)[1]);
 		glUseProgram(shaderProgram_m);
+
+		glClearColor(
+			scene_m.backgroundColor.r(),
+			scene_m.backgroundColor.g(),
+			scene_m.backgroundColor.b(),
+			1.0
+		);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// TODO: Camerawork.
 

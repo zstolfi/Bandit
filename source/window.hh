@@ -27,6 +27,7 @@ public:
 		appState_m = appState;
 		setupErrorLog();
 		setupGlfw(title);
+		graphics_m.load(glfwGetProcAddress, &size_m);
 		setup(*this, appState_m);
 		while (!glfwWindowShouldClose(handle_m)) {
 			renderLoop(*this, appState_m);
@@ -36,6 +37,7 @@ public:
 	}
 
 	~Window() {
+		graphics_m.unload();
 		glfwTerminate();
 	}
 
@@ -100,17 +102,10 @@ private:
 		if (!handle_m) exit("glfwCreateWindow: Unable to create window.\n");
 		glfwMakeContextCurrent(handle_m);
 
-		// Load in GLAD for normal looking GL function calls.
-		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-			exit("gladLoadGLLoader: Unable to start GLAD.\n");
-		}
-
 		// Set our width and height, and respond when a user resizes.
-		glViewport(0, 0, size_m[0], size_m[1]);
 		bind(glfwSetFramebufferSizeCallback,
 			[&] (unsigned newWidth, unsigned newHeight) {
 				size_m = {newWidth, newHeight};
-				glViewport(0, 0, newWidth, newHeight);
 			}
 		);
 
