@@ -4,12 +4,12 @@
 #include <glad/glad.h>
 
 auto const Colors = std::vector<Color<3>> {
-	{{0.9, 0.5, 0.2}}, // Orange
-	{{0.9, 0.2, 0.2}}, // Red
 	{{0.9, 0.9, 0.9}}, // White
 	{{0.9, 0.9, 0.2}}, // Yellow
 	{{0.2, 0.3, 0.9}}, // Blue
 	{{0.1, 0.9, 0.2}}, // Green
+	{{0.9, 0.2, 0.2}}, // Red
+	{{0.9, 0.5, 0.2}}, // Orange
 };
 
 auto const ColorsBackground = std::vector<Color<3>> {
@@ -17,13 +17,111 @@ auto const ColorsBackground = std::vector<Color<3>> {
 	{{0.6, 0.7, 0.6}}, // Solved
 };
 
-class Model {
-	std::vector<GLfloat> vertices_m {};
+class Shader {
+	GLuint program_m {};
+
+	auto static LogInfo() {
+		return std::tuple {
+			glGetProgramiv, glGetProgramInfoLog, GL_LINK_STATUS
+		};
+	}
+
+	class SubShader {
+		friend Shader;
+		GLuint id_m {};
+
+		auto static LogInfo() {
+			return std::tuple {
+				glGetShaderiv, glGetShaderInfoLog, GL_COMPILE_STATUS
+			};
+		}
+
+	public:
+		SubShader(std::span<char const> source, GLenum shaderType)
+		:	id_m {glCreateShader(GL_VERTEX_SHADER)} {
+			auto string = source.data();
+			glShaderSource(id_m, 1, &string, {});
+			glCompileShader(id_m);
+		}
+
+		~SubShader() {
+			glDeleteShader(id_m);
+		}
+
+		GLuint id() const { return id_m; }
+	};
 
 public:
+	Shader() = default;
+
+	Shader(
+		std::span<char const> vertexSource,
+		std::span<char const> fragmentSource
+	) {
+		SubShader vertexShader {vertexSource, GL_VERTEX_SHADER};
+		SubShader fragmentShader {fragmentSource, GL_FRAGMENT_SHADER};
+
+		program_m = glCreateProgram();
+		glAttachShader(program_m, vertexShader.id());
+		glAttachShader(program_m, fragmentShader.id());
+		glLinkProgram(program_m);
+
+		// Check for errors.
+		verify(vertexShader, "Vertex shader", "compile");
+		verify(fragmentShader, "Fragment shader", "compile");
+		verify(*this, "Shader program", "link");
+	}
+
+	~Shader() {
+		glDeleteProgram(program_m);
+	}
+
+	GLuint id() const { return program_m; }
+
+	void static verify(auto object, std::string name, std::string action) {
+		auto [getter, logGetter, status] = decltype(object)::LogInfo();
+
+		GLint successful {}, logLength {};
+		getter(object.id(), status, &successful);
+		getter(object.id(), GL_INFO_LOG_LENGTH, &logLength);
+		if (!successful) {
+			std::vector<char> message(logLength, '\0');
+			logGetter(object.id(), logLength, {}, message.data());
+			error("{}: Unable to {}.\n{}", name, action, message.data());
+			if (message.empty()) error("(no diagnostic)\n");
+		}
+	}
+};
+
+class Model {
+	struct Vertex_t {
+		Coord<3, float> position {};
+		Color<3, float> color {};
+	};
+
+	std::vector<Vertex_t> vertices_m {};
+	GLuint VBO_m {}, VAO_m {};
+
+public:
+	using Vertex = Vertex_t;
 	Model() = default;
 
+	~Model() {
+		glDeleteVertexArrays(1, &VAO_m);
+		glDeleteBuffers(1, &VBO_m);
+	}
+
 	auto const& vertices() const { return vertices_m; }
+	GLuint VBO() const { return VBO_m; };
+	GLuint VAO() const { return VAO_m; };
+
+	void vertices(std::span<Vertex_t const> vs) {
+		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
+		glBufferData(GL_ARRAY_BUFFER,
+			vs.size() * sizeof(Vertex_t),
+			vs.data(), GL_STATIC_DRAW
+		);
+	}
 };
 
 struct Scene {
@@ -34,141 +132,70 @@ struct Scene {
 class Graphics {
 	std::array<unsigned, 2> const* size_m {};
 	Scene const* scene_m;
-
-	GLuint shaderProgram_m {};
-	GLuint VBO_m {}, VAO_m {};
+	Shader shader_m {};
 
 public:
 	Graphics() = default;
 
-	void load(auto* procAddress, std::array<unsigned, 2> const* size) {
+	Graphics(auto* procAddress, std::array<unsigned, 2> const* size) {
 		// Load in GLAD for normal looking GL function calls.
 		if (!gladLoadGLLoader((GLADloadproc)procAddress)) {
 			exit("gladLoadGLLoader: Unable to start GLAD.\n");
 		}
-		setupOpenGl();
 		size_m = size;
-	};
 
-	void unload() {
-		glDeleteVertexArrays(1, &VAO_m);
-		glDeleteBuffers(1, &VBO_m);
-		glDeleteProgram(shaderProgram_m);
-	}
-
-	GLuint shaderProgram() const { return shaderProgram_m; };
-	GLuint VBO() const { return VBO_m; };
-	GLuint VAO() const { return VAO_m; };
-
-	void scene(Scene const& scene) {
-		scene_m = &scene;
-//		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
-//		glBufferData(GL_ARRAY_BUFFER,
-//			vs.size() * sizeof(GLfloat),
-//			vs.data(), GL_STATIC_DRAW
-//		);
-	}
-
-	template <class ... Args>
-	void uniform(auto& setter, std::string const& name, Args const& ... args) {
-		setter(glGetUniformLocation(shaderProgram_m, name.c_str()), args ... );
-	}
-
-	stdfs::path static inline const vertexShaderPath = "vertex.glsl";
-
-	stdfs::path static inline const fragmentShaderPath = "fragment.glsl";
-
-	enum ObjectType {
-		Shader, Program
-	};
-
-	template <ObjectType OT>
-	void checkObject(GLuint object, std::string name) {
-		auto [getObject, getObjectLog, status] = (OT == Shader)
-		?	std::tuple {glGetShaderiv, glGetShaderInfoLog, GL_COMPILE_STATUS}
-		:	std::tuple {glGetProgramiv, glGetProgramInfoLog, GL_LINK_STATUS};
-		auto action = (OT == Shader)? "compile": "link";
-
-		GLint successful {}, logLength {};
-		getObject(object, status, &successful);
-		getObject(object, GL_INFO_LOG_LENGTH, &logLength);
-		if (!successful) {
-			std::vector<char> message(logLength, '\0');
-			glGetShaderInfoLog(object, logLength, {}, message.data());
-			error("{}: Unable to {}.\n{}", name, action, message.data());
-			if (message.empty()) error("(no diagnostic)\n");
-		}
-	}
-
-	auto static loadSource(stdfs::path path) {
-		auto result = std::string {};
-
-		if (std::ifstream file {path}) {
-			std::istreambuf_iterator<char> begin {file}, end {};
-			result = {begin, end};
-		}
-		else error("loadSource: Unable to load {}.\n", path.native());
-
-		return result;
-	}
-
-	void setupOpenGl() {
-		// Set up shaders.
-		std::string vertexShaderSource = loadSource(vertexShaderPath);
-		std::string fragmentShaderSource = loadSource(fragmentShaderPath);
-		char const* currentSource {};
-
-		GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-		currentSource = vertexShaderSource.c_str();
-		glShaderSource(vertexShader, 1, &currentSource, {});
-		glCompileShader(vertexShader);
-
-		GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-		currentSource = fragmentShaderSource.c_str();
-		glShaderSource(fragmentShader, 1, &currentSource, {});
-		glCompileShader(fragmentShader);
-
-		shaderProgram_m = glCreateProgram();
-		glAttachShader(shaderProgram_m, vertexShader);
-		glAttachShader(shaderProgram_m, fragmentShader);
-		glLinkProgram(shaderProgram_m);
-
-		// Check for errors.
-		checkObject<Shader>(vertexShader, "Vertex shader");
-		checkObject<Shader>(fragmentShader, "Fragment shader");
-		checkObject<Program>(shaderProgram_m, "Shader program");
-
-		// TODO: Maybe handle this with RAII?
-		glDeleteShader(vertexShader);
-		glDeleteShader(fragmentShader);
-
-		// Generate geometry objects.
-		glGenVertexArrays(1, &VAO_m);
-		glGenBuffers(1, &VBO_m);
-
-		glBindVertexArray(VAO_m);
-		glBindBuffer(GL_ARRAY_BUFFER, VBO_m);
+		shader_m = {
+			loadSource(vertexShaderPath),
+			loadSource(fragmentShaderPath),
+		};
 
 		// Define position attribute.
 		glVertexAttribPointer(
-			0, 3, GL_FLOAT, GL_FALSE,
-			6 * sizeof(GLfloat), (GLvoid*)(0 * sizeof(GLfloat))
+			0, decltype(Model::Vertex::position)::Dimension(),
+			GL_FLOAT, GL_FALSE, sizeof(Model::Vertex),
+			(GLvoid*)offsetof(Model::Vertex, position)
 		);
 		glEnableVertexAttribArray(0);
 
 		// Define color attribute.
 		glVertexAttribPointer(
-			1, 3, GL_FLOAT, GL_FALSE,
-			6 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat))
+			1, decltype(Model::Vertex::color)::Dimension(),
+			GL_FLOAT, GL_FALSE, sizeof(Model::Vertex),
+			(GLvoid*)offsetof(Model::Vertex, color)
 		);
 		glEnableVertexAttribArray(1);
 
 		glEnable(GL_DEPTH_TEST);
+	};
+
+	Shader shader() const { return shader_m; };
+
+	void scene(Scene const& scene) {
+		scene_m = &scene;
+	}
+
+	template <class ... Args>
+	void uniform(auto& setter, std::string const& name, Args const& ... args) {
+		setter(glGetUniformLocation(shader_m.id(), name.c_str()), args ... );
+	}
+
+	stdfs::path static inline const vertexShaderPath = "vertex.glsl";
+	stdfs::path static inline const fragmentShaderPath = "fragment.glsl";
+
+	auto static loadSource(stdfs::path path) {
+		auto result = std::string {};
+		if (std::ifstream file {path}) {
+			std::istreambuf_iterator<char> begin {file}, end {};
+			result = {begin, end};
+		}
+		else error("loadSource: Unable to load {}.\n", path.native());
+		return result;
 	}
 
 	void draw() const {
 		glViewport(0, 0, (*size_m)[0], (*size_m)[1]);
-		glUseProgram(shaderProgram_m);
+		glUseProgram(shader_m.id());
+		if (!scene_m) return;
 
 		glClearColor(
 			scene_m->backgroundColor.r(),
@@ -180,8 +207,10 @@ public:
 
 		// TODO: Camerawork.
 
-//		glBindVertexArray(VAO_m);
-//		glDrawArrays(GL_TRIANGLES, 0, model.vertices().size()/6);
-//		glBindVertexArray(0);
+		for (auto model: scene_m->models) {
+			glBindVertexArray(model->VAO());
+			glBindBuffer(GL_ARRAY_BUFFER, model->VBO());
+			glDrawArrays(GL_TRIANGLES, 0, model->vertices().size());
+		}
 	}
 };

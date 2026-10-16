@@ -27,7 +27,7 @@ public:
 		appState_m = appState;
 		setupErrorLog();
 		setupGlfw(title);
-		graphics_m.load(glfwGetProcAddress, &size_m);
+		graphics_m = {glfwGetProcAddress, &size_m};
 		setup(*this, appState_m);
 		while (!glfwWindowShouldClose(handle_m)) {
 			renderLoop(*this, appState_m);
@@ -37,7 +37,7 @@ public:
 	}
 
 	~Window() {
-		graphics_m.unload();
+//		graphics_m.unload();
 		glfwTerminate();
 	}
 
